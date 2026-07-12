@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Smart Campus Management System - Bon Secours Arts and Science College" />
+
+  {# CSRF token used by all AJAX POST requests #}
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+
+  <title>{% block title %}{{ title | default('SCMS') }} - Bon Secours College{% endblock %}</title>
+
+  {# ── Google Fonts (Sora & Inter) ── #}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  {# ── Local Bootstrap & Icons ── #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}" />
+
+  {# ── Custom stylesheet ── #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/campus.css') }}" />
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="scms-body">
+
+  {# ════════════════════════════════════════════════════════════════════════
+     SIDEBAR
+  ════════════════════════════════════════════════════════════════════════ #}
+  {% if current_user.is_authenticated %}
+  <nav id="sidebar" class="scms-sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span class="logo-icon">🎓</span>
+        <div class="logo-text">
+          <span class="logo-title">Smart Campus</span>
+          <span class="logo-sub">Bon Secours College</span>
+        </div>
+      </div>
+      <button id="sidebarToggle" class="sidebar-toggle d-lg-none" aria-label="Toggle sidebar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">
+        {{ current_user.email[0].upper() }}
+      </div>
+      <div class="user-info">
+        <span class="user-email" title="{{ current_user.email }}">{{ current_user.email }}</span>
+        <span class="badge role-badge">
+          {{ current_user.role.value | capitalize }}
+        </span>
+      </div>
+    </div>
+
+    <ul class="sidebar-nav">
+      {# ── Admin Links ── #}
+      {% if current_user.role.value == 'admin' %}
+      <li class="nav-section-label">Main</li>
+      <li>
+        <a href="{{ url_for('dashboard.admin_dashboard') }}"
+           class="sidebar-link {% if request.endpoint == 'dashboard.admin_dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('auth.register') }}"
+           class="sidebar-link {% if request.endpoint == 'auth.register' %}active{% endif %}">
+          <i class="bi bi-person-plus-fill"></i> Add User
+        </a>
+      </li>
+      <li class="nav-section-label">Academic Data</li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-students">
+          <i class="bi bi-mortarboard-fill"></i> Students
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-faculty">
+          <i class="bi bi-person-workspace"></i> Faculty
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-courses">
+          <i class="bi bi-book-fill"></i> Courses
+        </a>
+      </li>
+
+      {# ── Faculty Links ── #}
+      {% elif current_user.role.value == 'faculty' %}
+      <li class="nav-section-label">Faculty Panel</li>
+      <li>
+        <a href="{{ url_for('dashboard.faculty_dashboard') }}"
+           class="sidebar-link {% if request.endpoint == 'dashboard.faculty_dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-my-courses">
+          <i class="bi bi-book-fill"></i> My Courses
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-attendance-panel">
+          <i class="bi bi-calendar-check-fill"></i> Attendance
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-marks-panel">
+          <i class="bi bi-clipboard2-data-fill"></i> Enter Marks
+        </a>
+      </li>
+
+      {# ── Student Links ── #}
+      {% elif current_user.role.value == 'student' %}
+      <li class="nav-section-label">Student Portal</li>
+      <li>
+        <a href="{{ url_for('dashboard.student_dashboard') }}"
+           class="sidebar-link {% if request.endpoint == 'dashboard.student_dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-my-attendance">
+          <i class="bi bi-calendar-check-fill"></i> My Attendance
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-my-marks">
+          <i class="bi bi-bar-chart-fill"></i> My Marks
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+
+    <div class="sidebar-footer">
+      <form method="POST" action="{{ url_for('auth.logout') }}" class="m-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="sidebar-logout">
+          <i class="bi bi-box-arrow-left"></i> Sign Out
+        </button>
+      </form>
+    </div>
+  </nav>
+
+  {# Overlay for mobile sidebar #}
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+  {% endif %}
+
+  {# ════════════════════════════════════════════════════════════════════════
+     MAIN CONTENT
+  ════════════════════════════════════════════════════════════════════════ #}
+  <main class="scms-main {% if not current_user.is_authenticated %}scms-main--full{% endif %}">
+
+    {# ── Top bar (authenticated only) ── #}
+    {% if current_user.is_authenticated %}
+    <header class="scms-topbar">
+      <button id="sidebarToggleMobile" class="btn scms-btn-icon d-lg-none" aria-label="Open sidebar">
+        <i class="bi bi-list"></i>
+      </button>
+      <h1 class="topbar-title">{% block page_title %}{{ title | default('Dashboard') }}{% endblock %}</h1>
+      <div class="topbar-right">
+        <span class="topbar-time" id="currentTime"></span>
+      </div>
+    </header>
+    {% endif %}
+
+    {# ── Flash messages ── #}
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+      <div class="flash-container px-4 pt-3">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show scms-alert" role="alert">
+          <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% elif category == 'warning' %}exclamation-circle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    {# ── Page content ── #}
+    <div class="scms-content">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  {# ════════════════════════════════════════════════════════════════════════
+     MOBILE BOTTOM NAVIGATION
+  ════════════════════════════════════════════════════════════════════════ #}
+  {% if current_user.is_authenticated %}
+  <nav class="mobile-bottom-nav">
+    {% if current_user.role.value == 'admin' %}
+      <a href="{{ url_for('dashboard.admin_dashboard') }}" class="mobile-nav-link {% if request.endpoint == 'dashboard.admin_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i>
+        <span>Home</span>
+      </a>
+      <a href="{{ url_for('auth.register') }}" class="mobile-nav-link {% if request.endpoint == 'auth.register' %}active{% endif %}">
+        <i class="bi bi-person-plus-fill"></i>
+        <span>Add User</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-students">
+        <i class="bi bi-mortarboard-fill"></i>
+        <span>Students</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-faculty">
+        <i class="bi bi-person-workspace"></i>
+        <span>Faculty</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-courses">
+        <i class="bi bi-book-fill"></i>
+        <span>Courses</span>
+      </a>
+    {% elif current_user.role.value == 'faculty' %}
+      <a href="{{ url_for('dashboard.faculty_dashboard') }}" class="mobile-nav-link {% if request.endpoint == 'dashboard.faculty_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i>
+        <span>Home</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-my-courses">
+        <i class="bi bi-book-fill"></i>
+        <span>Courses</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-attendance-panel">
+        <i class="bi bi-calendar-check-fill"></i>
+        <span>Attendance</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-marks-panel">
+        <i class="bi bi-clipboard2-data-fill"></i>
+        <span>Marks</span>
+      </a>
+    {% elif current_user.role.value == 'student' %}
+      <a href="{{ url_for('dashboard.student_dashboard') }}" class="mobile-nav-link {% if request.endpoint == 'dashboard.student_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i>
+        <span>Home</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-my-attendance">
+        <i class="bi bi-calendar-check-fill"></i>
+        <span>Attendance</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-my-marks">
+        <i class="bi bi-bar-chart-fill"></i>
+        <span>Marks</span>
+      </a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+  {# ════════════════════════════════════════════════════════════════════════
+     SCRIPTS
+  ════════════════════════════════════════════════════════════════════════ #}
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+
+  {# Live clock #}
+  <script>
+    (function () {
+      const el = document.getElementById('currentTime');
+      if (!el) return;
+      function tick() {
+        el.textContent = new Date().toLocaleTimeString('en-IN', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+
+    // Mobile sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    function openSidebar() {
+      sidebar && sidebar.classList.add('open');
+      overlay && overlay.classList.add('visible');
+    }
+    function closeSidebar() {
+      sidebar && sidebar.classList.remove('open');
+      overlay && overlay.classList.remove('visible');
+    }
+    document.getElementById('sidebarToggleMobile')?.addEventListener('click', openSidebar);
+    document.getElementById('sidebarToggle')?.addEventListener('click', closeSidebar);
+    overlay?.addEventListener('click', closeSidebar);
+
+    // Delegate Mobile Bottom Nav Clicks to Sidebar Nav elements
+    document.getElementById('mb-nav-students')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-students')?.click(); });
+    document.getElementById('mb-nav-faculty')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-faculty')?.click(); });
+    document.getElementById('mb-nav-courses')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-courses')?.click(); });
+    document.getElementById('mb-nav-my-courses')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-my-courses')?.click(); });
+    document.getElementById('mb-nav-attendance-panel')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-attendance-panel')?.click(); });
+    document.getElementById('mb-nav-marks-panel')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-marks-panel')?.click(); });
+    document.getElementById('mb-nav-my-attendance')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-my-attendance')?.click(); });
+    document.getElementById('mb-nav-my-marks')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-my-marks')?.click(); });
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

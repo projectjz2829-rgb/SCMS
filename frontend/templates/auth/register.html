@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Register User - SCMS{% endblock %}
+{% block page_title %}Create New Account{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-xl-8">
+
+      <div class="card p-4">
+        <div class="d-flex align-items-center mb-4 pb-2 border-bottom">
+          <div class="user-avatar me-3">
+            <i class="bi bi-person-plus-fill"></i>
+          </div>
+          <div>
+            <h2 class="card-title mb-0" style="font-size: 1.35rem; font-weight: 700;">New User Registration</h2>
+            <p class="text-xs text-muted mb-0">Admin Panel - Register student or faculty accounts</p>
+          </div>
+        </div>
+
+        <form id="registerForm" method="POST" action="{{ url_for('auth.register') }}" novalidate>
+          {{ form.hidden_tag() }}
+
+          {# ── Account credentials ── #}
+          <h6 class="form-section-heading">
+            <i class="bi bi-key-fill"></i> Account Credentials
+          </h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label for="email" class="form-label scms-label">Email Address</label>
+              {{ form.email(id="email", class="form-control scms-input" ~ (" is-invalid" if form.email.errors else ""), placeholder="user@bonsecours.edu.in") }}
+              {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label for="role" class="form-label scms-label">Role</label>
+              {{ form.role(id="role", class="form-select scms-input" ~ (" is-invalid" if form.role.errors else ""), onchange="toggleRoleFields(this.value)") }}
+              {% for e in form.role.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label for="password" class="form-label scms-label">Password</label>
+              {{ form.password(id="password", class="form-control scms-input" ~ (" is-invalid" if form.password.errors else ""), placeholder="Min. 8 characters") }}
+              {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label for="confirm_password" class="form-label scms-label">Confirm Password</label>
+              {{ form.confirm_password(id="confirm_password", class="form-control scms-input" ~ (" is-invalid" if form.confirm_password.errors else ""), placeholder="Repeat password") }}
+              {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          {# ── Common fields ── #}
+          <h6 class="form-section-heading">
+            <i class="bi bi-person-fill"></i> Personal Information
+          </h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label for="full_name" class="form-label scms-label">Full Name</label>
+              {{ form.full_name(id="full_name", class="form-control scms-input", placeholder="As on college records") }}
+            </div>
+            <div class="col-md-6">
+              <label for="phone" class="form-label scms-label">Phone Number</label>
+              {{ form.phone(id="phone", class="form-control scms-input", placeholder="+91 XXXXX XXXXX") }}
+            </div>
+          </div>
+
+          {# ── Student-only fields ── #}
+          <div id="studentFields">
+            <h6 class="form-section-heading">
+              <i class="bi bi-mortarboard-fill"></i> Student Details
+            </h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label for="roll_no" class="form-label scms-label">Roll Number</label>
+                {{ form.roll_no(id="roll_no", class="form-control scms-input", placeholder="e.g. 22CS001") }}
+              </div>
+              <div class="col-md-4">
+                <label for="dept" class="form-label scms-label">Department</label>
+                {{ form.dept(id="dept", class="form-control scms-input", placeholder="e.g. Computer Science") }}
+              </div>
+              <div class="col-md-2">
+                <label for="year" class="form-label scms-label">Year</label>
+                {{ form.year(id="year", class="form-select scms-input") }}
+              </div>
+              <div class="col-md-2">
+                <label for="section" class="form-label scms-label">Section</label>
+                {{ form.section(id="section", class="form-control scms-input", placeholder="A") }}
+              </div>
+            </div>
+          </div>
+
+          {# ── Faculty-only fields ── #}
+          <div id="facultyFields" style="display:none;">
+            <h6 class="form-section-heading">
+              <i class="bi bi-person-workspace"></i> Faculty Details
+            </h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label for="emp_id" class="form-label scms-label">Employee ID</label>
+                {{ form.emp_id(id="emp_id", class="form-control scms-input", placeholder="e.g. FAC2024001") }}
+              </div>
+              <div class="col-md-4">
+                <label for="dept_fac" class="form-label scms-label">Department</label>
+                <input id="dept_fac" name="dept_fac" type="text" class="form-control scms-input" placeholder="e.g. Mathematics" />
+              </div>
+              <div class="col-md-4">
+                <label for="designation" class="form-label scms-label">Designation</label>
+                {{ form.designation(id="designation", class="form-control scms-input", placeholder="e.g. Assistant Professor") }}
+              </div>
+            </div>
+          </div>
+
+          {# ── Submit ── #}
+          <div class="d-flex gap-2 justify-content-end mt-4 pt-3 border-top">
+            <a href="{{ url_for('dashboard.admin_dashboard') }}" class="btn scms-btn-secondary">
+              <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+            {{ form.submit(class="btn scms-btn-primary", id="registerBtn") }}
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function toggleRoleFields(role) {
+    const studentDiv = document.getElementById('studentFields');
+    const facultyDiv = document.getElementById('facultyFields');
+    if (studentDiv) studentDiv.style.display = (role === 'student') ? '' : 'none';
+    if (facultyDiv) facultyDiv.style.display = (role === 'faculty') ? '' : 'none';
+  }
+  // Initialise on page load
+  const roleEl = document.getElementById('role');
+  if (roleEl) {
+    toggleRoleFields(roleEl.value);
+  }
+
+  document.getElementById('registerForm')?.addEventListener('submit', function () {
+    const btn = document.getElementById('registerBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating…';
+    }
+  });
+</script>
+{% endblock %}

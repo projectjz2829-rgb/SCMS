@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard - SCMS{% endblock %}
+{% block page_title %}Student Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2 fade-in">
+
+  {# ── Student profile banner ── #}
+  <div class="card p-4 mb-4" style="background: var(--gradient-hero); color: #fff; border: none; box-shadow: var(--shadow-navy);">
+    <div class="d-flex align-items-center flex-wrap gap-3">
+      <div class="user-avatar" style="width: 64px; height: 64px; font-size: 1.75rem; background: var(--gradient-gold); color: var(--color-primary); box-shadow: var(--shadow-gold);">
+        {{ student.full_name[0].upper() if student else 'S' }}
+      </div>
+      <div>
+        <h2 class="mb-1 text-white" style="font-family: var(--font-display); font-weight: 700; font-size: 1.5rem;">{{ student.full_name if student else 'Student' }}</h2>
+        <p class="mb-0 text-sm opacity-90 d-flex flex-wrap gap-2 align-items-center mt-1">
+          <span class="badge role-badge">Roll No: {{ student.roll_no if student else '-' }}</span>
+          <span class="badge role-badge">{{ student.dept if student else '' }} Dept</span>
+          <span class="badge role-badge">Year {{ student.year if student else '' }} - Sec {{ student.section if student else '' }}</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Attendance warning banner (< 75%) ── #}
+  <div id="lowAttendanceBanner" style="display:none;" class="alert alert-danger scms-alert d-flex align-items-start mb-4 border-start border-4 border-danger" role="alert">
+    <i class="bi bi-exclamation-triangle-fill fs-4 me-3 mt-1 flex-shrink-0"></i>
+    <div>
+      <strong style="font-family: var(--font-display); font-weight: 700;">Attendance Shortage Alert!</strong>
+      <span id="lowAttendanceMsg" class="d-block mt-1"></span>
+      <small class="text-xs mt-1 d-block opacity-85">Note: Students with attendance below 75% are ineligible to appear for examinations. Please consult your class advisor immediately.</small>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    {# ── Attendance summary ── #}
+    <div class="col-12 col-lg-7">
+      <div class="card p-4 mb-4">
+        <h5 class="card-title mb-1">
+          <i class="bi bi-calendar-check-fill text-success me-1"></i>Attendance Analytics
+        </h5>
+        <p class="text-xs text-muted mb-4">Detailed subject attendance report and cumulative percentage</p>
+
+        {# SVG Circular Attendance Ring #}
+        <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+          <div class="attendance-ring-container me-4">
+            <svg class="circular-progress-svg" width="90" height="90">
+              <circle class="ring-bg" cx="45" cy="45" r="40" />
+              <circle class="ring-indicator" id="overallRing" cx="45" cy="45" r="40" />
+            </svg>
+            <div class="ring-content">
+              <span class="ring-percentage" id="overallAttPct">-</span>
+              <span class="ring-label">Overall</span>
+            </div>
+          </div>
+          <div>
+            <p class="mb-1 fw-bold" style="font-family: var(--font-display);">Cumulative Attendance Status</p>
+            <p class="text-xs text-muted mb-0">Aggregated real-time attendance score across all registered lectures.</p>
+          </div>
+        </div>
+
+        <div id="subjectAttendance" class="mt-3">
+          <div class="skeleton-item">Loading subject attendance matrix…</div>
+        </div>
+      </div>
+
+      {# Attendance chart #}
+      <div class="card p-4">
+        <h5 class="card-title mb-3">
+          <i class="bi bi-bar-chart-fill text-primary-scms me-1"></i>Attendance Curve by Subject
+        </h5>
+        <div class="chart-container" style="position: relative; height:200px; width:100%;">
+          <canvas id="studentAttChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    {# ── Marks + Bulletin ── #}
+    <div class="col-12 col-lg-5">
+      <div class="card p-4 mb-4">
+        <h5 class="card-title mb-3">
+          <i class="bi bi-clipboard2-data-fill text-accent me-1"></i>Academic Performance (Marks)
+        </h5>
+        <div class="table-responsive-card mt-2">
+          <table class="table scms-table" id="marksTable">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th class="text-center">IA 1</th>
+                <th class="text-center">IA 2</th>
+                <th class="text-center">Sem</th>
+                <th class="text-center">Prac</th>
+              </tr>
+            </thead>
+            <tbody id="marksBody">
+              <tr><td colspan="5" class="text-center text-muted py-3">Retrieving marks ledger…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card p-4">
+        <h5 class="card-title mb-3">
+          <i class="bi bi-megaphone-fill text-primary-scms me-1"></i>Campus Announcements Bulletin
+        </h5>
+        <ul class="bulletin-list mt-2" id="bulletinList">
+          <li class="bulletin-item skeleton-item">Fetching bulletin updates…</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
