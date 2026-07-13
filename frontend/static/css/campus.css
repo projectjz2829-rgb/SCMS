@@ -370,12 +370,13 @@ h1, h2, h3, h4, h5, h6 {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(13, 17, 23, 0.4);
-  backdrop-filter: blur(8px);
+  background: rgba(13, 17, 23, 0.5);
+  /* Removed backdrop-filter: blur — it blurred all page content behind the overlay
+     on mobile, making the entire screen look smudged when the sidebar opened. */
   z-index: 1040;
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--transition);
+  transition: opacity 200ms ease;
 }
 .sidebar-overlay.visible {
   opacity: 1;
@@ -1249,15 +1250,24 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 575.98px) {
-  /* Bottom Navigation Bar for Mobile */
+  /* On very small screens keep sidebar in DOM (for JS toggle) but push it
+     off-screen via transform — same as the 576-991px tablet breakpoint.
+     Previously sidebar was set to display:none which completely broke the
+     hamburger menu toggle: the sidebar could never slide in. */
   .scms-sidebar {
-    display: none; /* Completely hide sidebar on mobile */
+    transform: translateX(calc(-1 * var(--sidebar-width)));
   }
-  
+  .scms-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+
   .scms-main {
-    margin-bottom: 60px; /* Space for bottom nav */
+    /* Extra bottom padding so content isn't hidden behind the bottom nav bar */
+    padding-bottom: 70px;
   }
-  
+
+  /* Bottom Navigation Bar for Mobile */
   .mobile-bottom-nav {
     display: flex;
     position: fixed;
@@ -1267,12 +1277,12 @@ h1, h2, h3, h4, h5, h6 {
     height: 60px;
     background-color: var(--color-bg-elevated);
     border-top: 1px solid var(--color-border);
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
     z-index: 1030;
     justify-content: space-around;
     align-items: center;
   }
-  
+
   .mobile-nav-link {
     display: flex;
     flex-direction: column;
@@ -1286,24 +1296,25 @@ h1, h2, h3, h4, h5, h6 {
     flex: 1;
     height: 100%;
     position: relative;
+    padding-top: 6px;
   }
   .mobile-nav-link i {
     font-size: 1.25rem;
   }
-  
+
   .mobile-nav-link.active {
     color: var(--color-primary);
   }
   .mobile-nav-link.active::after {
     content: "";
     position: absolute;
-    top: 4px;
+    top: 2px;
     width: 5px;
     height: 5px;
     border-radius: var(--radius-full);
     background-color: var(--color-accent);
   }
-  
+
   .login-left-panel {
     display: none; /* Completely hide left panel on mobile, replace with header inside right panel */
   }
@@ -1311,11 +1322,11 @@ h1, h2, h3, h4, h5, h6 {
     flex: 1 1 100%;
     padding: 3rem 1.25rem;
   }
-  
+
   .login-form-container {
     max-width: 100%;
   }
-  
+
   /* Add inline mobile branding */
   .mobile-login-brand {
     text-align: center;
@@ -1326,6 +1337,38 @@ h1, h2, h3, h4, h5, h6 {
     height: auto;
     margin-bottom: 1.5rem;
     border-radius: var(--radius-md);
+  }
+
+  /* Prevent tables from overflowing on very small screens */
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+  .scms-table td, .scms-table th {
+    white-space: nowrap;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Ensure cards don't have excessive padding on tiny screens */
+  .card {
+    padding: 1rem !important;
+  }
+
+  /* Topbar adjustments for mobile */
+  .scms-topbar {
+    padding: 0 1rem;
+  }
+  .topbar-title {
+    font-size: 1rem;
+  }
+  .topbar-time {
+    display: none; /* Hide clock on very small screens to save space */
+  }
+
+  /* Content padding */
+  .scms-content {
+    padding: 1rem;
   }
 }
 

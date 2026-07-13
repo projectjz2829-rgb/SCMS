@@ -374,13 +374,19 @@ function renderActivityFeed() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function initFacultyDashboard() {
+  // Read faculty ID from the data attribute set by Jinja2 on the banner card
+  const bannerEl = document.querySelector('[data-faculty-id]');
+  const facultyId = bannerEl ? parseInt(bannerEl.dataset.facultyId) : null;
+
   try {
-    const courses = await apiRequest('GET', '/api/courses/');
+    // Use per-faculty courses endpoint so only assigned courses are shown
+    const url = facultyId ? `/api/faculty/${facultyId}/courses` : '/api/courses/';
+    const courses = await apiRequest('GET', url);
     renderMyCourses(courses);
     renderCourseAttChart(courses);
   } catch (err) {
     const el = document.getElementById('myCoursesList');
-    if (el) el.innerHTML = `<p class="text-danger small">${err.message}</p>`;
+    if (el) el.innerHTML = `<p class="text-danger small">${escapeHtml(err.message)}</p>`;
   }
 }
 

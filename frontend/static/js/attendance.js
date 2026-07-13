@@ -40,9 +40,13 @@ async function initAttendancePanel() {
   // Default date to today
   dateInput.value = new Date().toISOString().slice(0, 10);
 
-  // Load faculty courses
+  // Use the faculty-specific courses endpoint so only assigned courses appear
+  const bannerEl = document.querySelector('[data-faculty-id]');
+  const facultyId = bannerEl ? parseInt(bannerEl.dataset.facultyId) : null;
+  const url = facultyId ? `/api/faculty/${facultyId}/courses` : '/api/courses/';
+
   try {
-    const courses = await apiRequest('GET', '/api/courses/');
+    const courses = await apiRequest('GET', url);
     courses.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
@@ -50,7 +54,7 @@ async function initAttendancePanel() {
       courseSelect.appendChild(opt);
     });
   } catch (err) {
-    showToast(`Failed to load courses: ${err.message}`, 'danger');
+    showToast(`Failed to load courses: ${escapeHtml(err.message)}`, 'danger');
   }
 
   // Load roster button
@@ -206,9 +210,13 @@ async function initMarksPanel() {
   const marksCourseSelect = document.getElementById('marksCourseSelect');
   if (!marksCourseSelect) return;
 
-  // Populate marks course dropdown (same courses as attendance)
+  // Use the faculty-specific courses endpoint so only assigned courses appear
+  const bannerEl = document.querySelector('[data-faculty-id]');
+  const facultyId = bannerEl ? parseInt(bannerEl.dataset.facultyId) : null;
+  const url = facultyId ? `/api/faculty/${facultyId}/courses` : '/api/courses/';
+
   try {
-    const courses = await apiRequest('GET', '/api/courses/');
+    const courses = await apiRequest('GET', url);
     courses.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;

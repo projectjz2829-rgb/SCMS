@@ -10,7 +10,7 @@
 <div class="container-fluid py-2 fade-in">
 
   {# ── Student profile banner ── #}
-  <div class="card p-4 mb-4" style="background: var(--gradient-hero); color: #fff; border: none; box-shadow: var(--shadow-navy);">
+  <div class="card p-4 mb-4" data-student-id="{{ student.id if student else '' }}" style="background: var(--gradient-hero); color: #fff; border: none; box-shadow: var(--shadow-navy);">
     <div class="d-flex align-items-center flex-wrap gap-3">
       <div class="user-avatar" style="width: 64px; height: 64px; font-size: 1.75rem; background: var(--gradient-gold); color: var(--color-primary); box-shadow: var(--shadow-gold);">
         {{ student.full_name[0].upper() if student else 'S' }}

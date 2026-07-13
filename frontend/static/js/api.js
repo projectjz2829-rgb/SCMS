@@ -78,7 +78,16 @@ function showToast(message, type = 'success', duration = 3500) {
 
   const toast = document.createElement('div');
   toast.className = `scms-toast ${type}`;
-  toast.innerHTML = `<i class="bi ${iconMap[type] ?? 'bi-info-circle-fill'}"></i><span class="toast-message">${message}</span>`;
+
+  // Use DOM construction (not innerHTML) so message is treated as text,
+  // never as HTML — prevents XSS from crafted API error messages.
+  const icon = document.createElement('i');
+  icon.className = `bi ${iconMap[type] ?? 'bi-info-circle-fill'}`;
+  const span = document.createElement('span');
+  span.className = 'toast-message';
+  span.textContent = message;   // ← safe: textContent, not innerHTML
+  toast.appendChild(icon);
+  toast.appendChild(span);
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -88,6 +97,7 @@ function showToast(message, type = 'success', duration = 3500) {
     setTimeout(() => toast.remove(), 300);
   }, duration);
 }
+
 
 // ── Format helpers ────────────────────────────────────────────────────────
 function formatDate(isoString) {

@@ -28,22 +28,26 @@
           <div class="row g-3 mb-4">
             <div class="col-md-6">
               <label for="email" class="form-label scms-label">Email Address</label>
-              {{ form.email(id="email", class="form-control scms-input" ~ (" is-invalid" if form.email.errors else ""), placeholder="user@bonsecours.edu.in") }}
+              {{ form.email(id="email", class="form-control scms-input" ~ (" is-invalid" if form.email.errors else ""),
+              placeholder="user@bonsecours.edu.in") }}
               {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-md-6">
               <label for="role" class="form-label scms-label">Role</label>
-              {{ form.role(id="role", class="form-select scms-input" ~ (" is-invalid" if form.role.errors else ""), onchange="toggleRoleFields(this.value)") }}
+              {{ form.role(id="role", class="form-select scms-input" ~ (" is-invalid" if form.role.errors else ""),
+              onchange="toggleRoleFields(this.value)") }}
               {% for e in form.role.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-md-6">
               <label for="password" class="form-label scms-label">Password</label>
-              {{ form.password(id="password", class="form-control scms-input" ~ (" is-invalid" if form.password.errors else ""), placeholder="Min. 8 characters") }}
+              {{ form.password(id="password", class="form-control scms-input" ~ (" is-invalid" if form.password.errors
+              else ""), placeholder="Min. 8 characters") }}
               {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-md-6">
               <label for="confirm_password" class="form-label scms-label">Confirm Password</label>
-              {{ form.confirm_password(id="confirm_password", class="form-control scms-input" ~ (" is-invalid" if form.confirm_password.errors else ""), placeholder="Repeat password") }}
+              {{ form.confirm_password(id="confirm_password", class="form-control scms-input" ~ (" is-invalid" if
+              form.confirm_password.errors else ""), placeholder="Repeat password") }}
               {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
           </div>
@@ -100,7 +104,10 @@
               </div>
               <div class="col-md-4">
                 <label for="dept_fac" class="form-label scms-label">Department</label>
-                <input id="dept_fac" name="dept_fac" type="text" class="form-control scms-input" placeholder="e.g. Mathematics" />
+                {# Use the same WTForms form.dept field so name="dept" is submitted correctly.
+                   A different HTML id (dept_fac) distinguishes it from the student dept input
+                   for screen readers and CSS, but the backend receives one unified "dept" key. #}
+                {{ form.dept(id="dept_fac", class="form-control scms-input", placeholder="e.g. Mathematics") }}
               </div>
               <div class="col-md-4">
                 <label for="designation" class="form-label scms-label">Designation</label>
@@ -126,17 +133,40 @@
 
 {% block extra_scripts %}
 <script>
+  // Selectors for the two role-specific sections and their submittable inputs
+  const studentInputIds = ['roll_no', 'dept', 'year', 'section'];
+  const facultyInputIds = ['emp_id', 'dept_fac', 'designation'];
+
+  function setDisabled(ids, isDisabled) {
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = isDisabled;
+    });
+  }
+
   function toggleRoleFields(role) {
     const studentDiv = document.getElementById('studentFields');
     const facultyDiv = document.getElementById('facultyFields');
-    if (studentDiv) studentDiv.style.display = (role === 'student') ? '' : 'none';
-    if (facultyDiv) facultyDiv.style.display = (role === 'faculty') ? '' : 'none';
+    const isStudent  = role === 'student';
+    const isFaculty  = role === 'faculty';
+
+    // Show / hide sections
+    if (studentDiv) studentDiv.style.display = isStudent ? '' : 'none';
+    if (facultyDiv) facultyDiv.style.display = isFaculty ? '' : 'none';
+
+    // Disable hidden section inputs so browsers don't submit blank values.
+    // This prevents the empty student-section "dept" from overwriting the
+    // faculty-section "dept" (both share name="dept" in the WTForms field).
+    setDisabled(studentInputIds, !isStudent);
+    setDisabled(facultyInputIds, !isFaculty);
   }
+
   // Initialise on page load
   const roleEl = document.getElementById('role');
-  if (roleEl) {
-    toggleRoleFields(roleEl.value);
-  }
+  if (roleEl) toggleRoleFields(roleEl.value);
+
+  // Re-run on change
+  roleEl?.addEventListener('change', () => toggleRoleFields(roleEl.value));
 
   document.getElementById('registerForm')?.addEventListener('submit', function () {
     const btn = document.getElementById('registerBtn');

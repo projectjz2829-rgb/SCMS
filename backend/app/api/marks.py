@@ -51,6 +51,18 @@ def enter_marks():
 
     faculty_id = current_user.faculty_profile.id if current_user.faculty_profile else None
 
+    # ── Marks range validation ───────────────────────────────────────────── #
+    # Enforce published assessment limits so no record can exceed max marks.
+    _LIMITS = {"internal_1": 25, "internal_2": 25, "semester_final": 75, "practical": 50}
+    for field, max_val in _LIMITS.items():
+        if field in data:
+            try:
+                v = int(data[field])
+            except (ValueError, TypeError):
+                return jsonify({"error": f"{field} must be an integer."}), 400
+            if not (0 <= v <= max_val):
+                return jsonify({"error": f"{field} must be between 0 and {max_val}."}), 400
+
     existing = Marks.query.filter_by(
         student_id=student_id,
         course_id=course_id,
@@ -116,6 +128,18 @@ def update_marks(mark_id: int):
             return jsonify({"error": "You did not enter these marks."}), 403
 
     data = request.get_json(silent=True) or {}
+
+    # ── Marks range validation ───────────────────────────────────────────── #
+    _LIMITS = {"internal_1": 25, "internal_2": 25, "semester_final": 75, "practical": 50}
+    for field, max_val in _LIMITS.items():
+        if field in data:
+            try:
+                v = int(data[field])
+            except (ValueError, TypeError):
+                return jsonify({"error": f"{field} must be an integer."}), 400
+            if not (0 <= v <= max_val):
+                return jsonify({"error": f"{field} must be between 0 and {max_val}."}), 400
+
     for field in _MARK_FIELDS:
         if field in data:
             setattr(mark, field, int(data[field]))
