@@ -243,16 +243,18 @@ async function loadDashboardStats() {
   animateCount('stat-faculty',  facultyRes.status === 'fulfilled'  ? facultyRes.value.length  : 0);
   animateCount('stat-courses',  coursesRes.status === 'fulfilled'  ? coursesRes.value.length  : 0);
 
-  // Today's attendance %
-  let todayPctVal = 76; 
-  if (studentsRes.status === 'fulfilled' && studentsRes.value.length > 0) {
-    todayPctVal = 82; // representative value
-  }
-  animateCount('stat-attendance', todayPctVal);
+  // Today's attendance % — use a representative static value
+  // (real live attendance requires an /api/attendance/today endpoint)
+  const todayPctVal = (studentsRes.status === 'fulfilled' && studentsRes.value.length > 0) ? 82 : 76;
   const attEl = document.getElementById('stat-attendance');
   if (attEl) {
-    // Append percentage sign after counting
-    setTimeout(() => { attEl.textContent = `${attEl.textContent}%`; }, 800);
+    // Animate the number then set the final text directly — avoids
+    // the accumulating '%' bug when this function is called by setInterval.
+    animateCount('stat-attendance', todayPctVal);
+    setTimeout(() => {
+      const el = document.getElementById('stat-attendance');
+      if (el) el.textContent = `${todayPctVal}%`;
+    }, 850);
   }
 
   // Render charts if courses available
@@ -374,9 +376,12 @@ function renderActivityFeed() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function initFacultyDashboard() {
-  // Read faculty ID from the data attribute set by Jinja2 on the banner card
+  // Read faculty ID from the data attribute set by Jinja2 on the banner card.
+  // Guard parseInt: if the attribute is missing/empty, parseInt returns NaN.
+  // Treat that as "no faculty profile" and fall back to listing all courses.
   const bannerEl = document.querySelector('[data-faculty-id]');
-  const facultyId = bannerEl ? parseInt(bannerEl.dataset.facultyId) : null;
+  const rawId = bannerEl ? parseInt(bannerEl.dataset.facultyId, 10) : NaN;
+  const facultyId = isNaN(rawId) ? null : rawId;
 
   try {
     // Use per-faculty courses endpoint so only assigned courses are shown
@@ -473,8 +478,12 @@ async function initStudentDashboard() {
 
 async function findOwnStudentId() {
   const el = document.querySelector('[data-student-id]');
-  if (el) return { id: parseInt(el.dataset.studentId) };
-  return null;
+  if (!el) return null;
+  const id = parseInt(el.dataset.studentId, 10);
+  // Guard against empty string (orphaned user with no profile) which parseInt
+  // converts to NaN — treat as "no profile" rather than making a broken API call.
+  if (isNaN(id)) return null;
+  return { id };
 }
 
 async function loadStudentAttendance(studentId) {
@@ -538,9 +547,9 @@ function processAndRenderAttendance(records) {
   const lowBanner = document.getElementById('lowAttendanceBanner');
   const lowMsg    = document.getElementById('lowAttendanceMsg');
   const lowSubjects = subjects.filter(s => s.total > 0 && Math.round((s.present / s.total) * 100) < 75);
-  if (lowSubjects.length > 0 && lowBanner) {
-    const names = lowSubjects.map(s => `<strong>${s.code}</strong>`).join(', ');
-    lowMsg.innerHTML = ` You have low attendance (shortage) in: ${names}.`;
+  if (lowSubjects.length > 0 && lowBanner && lowMsg) {
+    // Build the message safely using textContent to avoid XSS
+    lowMsg.textContent = ` You have low attendance (shortage) in: ${lowSubjects.map(s => s.code).join(', ')}.`;
     lowBanner.style.display = 'block';
   }
 
@@ -696,7 +705,7 @@ function animateCount(elementId, targetValue) {
   const el = document.getElementById(elementId);
   if (!el) return;
 
-  const numeric = parseInt(targetValue);
+  const numeric = parseInt(targetValue, 10);
   if (isNaN(numeric)) {
     el.textContent = targetValue;
     return;
@@ -712,14 +721,18 @@ function animateCount(elementId, targetValue) {
   }, 16);
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
 window.loadDashboardStats = loadDashboardStats;
+// escapeHtml is defined globally in api.js which loads before this file.
+// The local definition below is kept as a fallback only for pages that may
+// not load api.js (currently none, but kept defensively).
+if (typeof window.escapeHtml !== 'function') {
+  window.escapeHtml = function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+}

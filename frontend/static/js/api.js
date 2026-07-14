@@ -102,14 +102,33 @@ function showToast(message, type = 'success', duration = 3500) {
 // ── Format helpers ────────────────────────────────────────────────────────
 function formatDate(isoString) {
   if (!isoString) return '-';
-  return new Date(isoString).toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+    });
+  } catch (_) {
+    return '-';
+  }
 }
 
 function formatPct(value) {
   if (value === null || value === undefined || isNaN(value)) return '-';
   return `${Math.round(value)}%`;
+}
+
+// ── HTML escaping utility (defined here so it is available before any
+//    page-specific script loads — attendance.js and dashboard.js both
+//    rely on this and may load in any order) ────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 // Expose globally
@@ -118,3 +137,4 @@ window.showToast   = showToast;
 window.formatDate  = formatDate;
 window.formatPct   = formatPct;
 window.csrfToken   = csrfToken;
+window.escapeHtml  = escapeHtml;

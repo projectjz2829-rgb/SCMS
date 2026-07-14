@@ -79,7 +79,9 @@ def create_course():
     if Course.query.filter_by(code=data["code"].strip().upper()).first():
         return jsonify({"error": "Course code already exists."}), 409
 
-    course_dept = data["dept"].strip()
+    name_val = str(data["name"]).strip()
+    code_val = str(data["code"]).strip().upper()
+    course_dept = str(data["dept"]).strip()
     faculty_id = data.get("faculty_id")
     if faculty_id:
         faculty = db.session.get(Faculty, faculty_id)
@@ -94,8 +96,8 @@ def create_course():
             return jsonify({"error": "Faculty department does not match course department."}), 400
 
     course = Course(
-        name=data["name"].strip(),
-        code=data["code"].strip().upper(),
+        name=name_val,
+        code=code_val,
         dept=course_dept,
         semester=semester_val,
         faculty_id=faculty_id,
@@ -134,14 +136,17 @@ def update_course(course_id: int):
     data = request.get_json(silent=True) or {}
 
     if "name" in data:
-        course.name = data["name"].strip()
+        name_val = data["name"]
+        course.name = name_val.strip() if isinstance(name_val, str) else str(name_val).strip()
 
     # Determine the target department *before* persisting any changes so
     # faculty-dept validation can compare against the final dept value.
-    target_dept = data["dept"].strip() if "dept" in data else course.dept
-
     if "dept" in data:
+        dept_val = data["dept"]
+        target_dept = dept_val.strip() if isinstance(dept_val, str) else str(dept_val).strip()
         course.dept = target_dept
+    else:
+        target_dept = course.dept
 
     # ── Semester range validation ──────────────────────────────────────── #
     if "semester" in data:
@@ -270,6 +275,13 @@ def unenroll_student(course_id: int, student_id: int):
     ).first()
     if not enrollment:
         return jsonify({"error": "Student is not enrolled in this course."}), 404
+
+    # Clean up associated attendance and marks records for this course
+    # to maintain database consistency and prevent orphaned data.
+    from app.models.attendance import Attendance
+    from app.models.marks import Marks
+    Attendance.query.filter_by(student_id=student_id, course_id=course_id).delete()
+    Marks.query.filter_by(student_id=student_id, course_id=course_id).delete()
 
     db.session.delete(enrollment)
     db.session.commit()

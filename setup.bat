@@ -82,7 +82,7 @@ REM The seed script will use ADMIN_PASSWORD if set, else "Admin@SCMS2024!".
 if defined ADMIN_PASSWORD (
     python ../database/seed_admin.py --password "%ADMIN_PASSWORD%"
 ) else (
-    python ../database/seed_admin.py --password Admin@SCMS2024!
+    python ../database/seed_admin.py --password Admin@1234
 )
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Admin seeding failed. Check database connectivity.
@@ -108,7 +108,7 @@ echo.
 echo  ====================================================
 echo   SCMS is ready!
 echo   Open: http://127.0.0.1:5000
-echo   Admin: admin@bonsecours.edu.in / Admin@SCMS2024!
+echo   Admin: admin@scms.edu / Admin@1234
 echo   Press Ctrl+C to stop the server.
 echo  ====================================================
 echo.

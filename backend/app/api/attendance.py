@@ -75,13 +75,24 @@ def mark_attendance():
 
         if not student_id:
             continue
-        if not db.session.get(Student, student_id):
+        student = db.session.get(Student, student_id)
+        if not student:
             continue
 
-        try:
-            status = AttendanceStatusEnum[status_str]
-        except KeyError:
-            status = AttendanceStatusEnum.present
+        from app.models.course import Enrollment
+        enrolled = Enrollment.query.filter_by(student_id=student_id, course_id=course_id).first()
+        if not enrolled:
+            continue
+
+        status = AttendanceStatusEnum.present
+        if status_str:
+            try:
+                status = AttendanceStatusEnum(str(status_str).strip().lower())
+            except ValueError:
+                try:
+                    status = AttendanceStatusEnum[str(status_str).strip().lower()]
+                except KeyError:
+                    pass
 
         existing = Attendance.query.filter_by(
             student_id=student_id,
@@ -176,9 +187,12 @@ def update_attendance(att_id: int):
         return jsonify({"error": "status is required."}), 400
 
     try:
-        record.status = AttendanceStatusEnum[status_str]
-    except KeyError:
-        return jsonify({"error": "Invalid status. Use present, absent, or late."}), 400
+        record.status = AttendanceStatusEnum(str(status_str).strip().lower())
+    except ValueError:
+        try:
+            record.status = AttendanceStatusEnum[str(status_str).strip().lower()]
+        except KeyError:
+            return jsonify({"error": "Invalid status. Use present, absent, or late."}), 400
 
     db.session.commit()
     return jsonify(record.to_dict()), 200

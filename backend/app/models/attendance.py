@@ -60,11 +60,13 @@ class Attendance(db.Model):
             "student_name": self.student.full_name if self.student else None,
             "course_id": self.course_id,
             "course_code": self.course.code if self.course else None,
+            "course_name": self.course.name if self.course else None,
             "date": self.date.isoformat(),
             "status": self.status.value,
             "marked_by": self.marked_by,
             "created_at": self.created_at.isoformat(),
         }
+
 
     def __repr__(self) -> str:
         return (

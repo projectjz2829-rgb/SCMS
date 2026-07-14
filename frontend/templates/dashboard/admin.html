@@ -251,8 +251,6 @@
   </div>
 </div>
 
-{% endblock %}
-
 {# ── Delete Student Confirmation Modal ── #}
 <div class="modal fade" id="deleteStudentModal" tabindex="-1" aria-labelledby="deleteStudentModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -301,6 +299,7 @@
   </div>
 </div>
 
+{% endblock %}
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
@@ -312,25 +311,33 @@
     if (!btn || !msgEl) return;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+    msgEl.innerHTML = '';
     try {
       await apiRequest('POST', '/api/courses/', {
-        name: document.getElementById('courseName').value,
-        code: document.getElementById('courseCode').value,
-        dept: document.getElementById('courseDept').value,
+        name: document.getElementById('courseName').value.trim(),
+        code: document.getElementById('courseCode').value.trim(),
+        dept: document.getElementById('courseDept').value.trim(),
         semester: parseInt(document.getElementById('courseSemester').value),
       });
       msgEl.innerHTML = '<div class="alert alert-success py-2">Course created successfully!</div>';
+      // Reset form fields
+      document.getElementById('courseName').value = '';
+      document.getElementById('courseCode').value = '';
+      document.getElementById('courseDept').value = '';
       setTimeout(() => {
         const modal = bootstrap.Modal.getInstance(document.getElementById('addCourseModal'));
         if (modal) modal.hide();
+        msgEl.innerHTML = '';
       }, 1200);
     } catch (err) {
-      msgEl.innerHTML = `<div class="alert alert-danger py-2">${err.message}</div>`;
+      // escapeHtml guards against reflected XSS from a crafted server response
+      msgEl.innerHTML = `<div class="alert alert-danger py-2">${escapeHtml(err.message)}</div>`;
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Create Course';
     }
   });
+
 
   // Broadcast announcement
   document.getElementById('sendBroadcastBtn')?.addEventListener('click', () => {

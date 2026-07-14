@@ -40,9 +40,12 @@ async function initAttendancePanel() {
   // Default date to today
   dateInput.value = new Date().toISOString().slice(0, 10);
 
-  // Use the faculty-specific courses endpoint so only assigned courses appear
+  // Use the faculty-specific courses endpoint so only assigned courses appear.
+  // Guard parseInt: if the attribute is missing/empty, parseInt returns NaN —
+  // treat that as "no faculty profile" and fall back to listing all courses.
   const bannerEl = document.querySelector('[data-faculty-id]');
-  const facultyId = bannerEl ? parseInt(bannerEl.dataset.facultyId) : null;
+  const rawFacultyId = bannerEl ? parseInt(bannerEl.dataset.facultyId, 10) : NaN;
+  const facultyId = isNaN(rawFacultyId) ? null : rawFacultyId;
   const url = facultyId ? `/api/faculty/${facultyId}/courses` : '/api/courses/';
 
   try {
@@ -102,7 +105,7 @@ async function loadRoster() {
     rosterContainer.style.display = '';
 
   } catch (err) {
-    showToast(`Error loading roster: ${err.message}`, 'danger');
+    showToast(`Error loading roster: ${escapeHtml(err.message)}`, 'danger');
     rosterGrid.innerHTML = '';
   }
 }
@@ -184,15 +187,15 @@ async function submitAttendance() {
 
   try {
     const result = await apiRequest('POST', '/api/attendance/', {
-      course_id: parseInt(courseId),
+      course_id: parseInt(courseId, 10),
       date,
       records,
     });
     showToast(result.message || 'Attendance saved!', 'success');
-    msgEl.innerHTML = `<span class="text-success small"><i class="bi bi-check-circle me-1"></i>${result.message}</span>`;
+    msgEl.innerHTML = `<span class="text-success small"><i class="bi bi-check-circle me-1"></i>${escapeHtml(result.message)}</span>`;
   } catch (err) {
     showToast(`Error: ${err.message}`, 'danger');
-    msgEl.innerHTML = `<span class="text-danger small">${err.message}</span>`;
+    msgEl.innerHTML = `<span class="text-danger small">${escapeHtml(err.message)}</span>`;
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>Submit Attendance';
@@ -210,10 +213,11 @@ async function initMarksPanel() {
   const marksCourseSelect = document.getElementById('marksCourseSelect');
   if (!marksCourseSelect) return;
 
-  // Use the faculty-specific courses endpoint so only assigned courses appear
+  // Guard parseInt: same NaN safety as initAttendancePanel above.
   const bannerEl = document.querySelector('[data-faculty-id]');
-  const facultyId = bannerEl ? parseInt(bannerEl.dataset.facultyId) : null;
-  const url = facultyId ? `/api/faculty/${facultyId}/courses` : '/api/courses/';
+  const rawFacultyId2 = bannerEl ? parseInt(bannerEl.dataset.facultyId, 10) : NaN;
+  const facultyId2 = isNaN(rawFacultyId2) ? null : rawFacultyId2;
+  const url = facultyId2 ? `/api/faculty/${facultyId2}/courses` : '/api/courses/';
 
   try {
     const courses = await apiRequest('GET', url);
@@ -320,12 +324,12 @@ async function submitMarks() {
       const studentId = row.dataset.studentId;
       const fields = {};
       row.querySelectorAll('.marks-field').forEach(input => {
-        fields[input.dataset.field] = parseInt(input.value) || 0;
+        fields[input.dataset.field] = parseInt(input.value, 10) || 0;
       });
       try {
         await apiRequest('POST', '/api/marks/', {
-          student_id:   parseInt(studentId),
-          course_id:    parseInt(courseId),
+          student_id:   parseInt(studentId, 10),
+          course_id:    parseInt(courseId, 10),
           academic_year: academicYear,
           ...fields,
         });
@@ -349,9 +353,5 @@ async function submitMarks() {
   }
 }
 
-// ── Helpers ──
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-}
+// escapeHtml is defined globally in api.js (loaded before this file).
+// No local redefinition needed.

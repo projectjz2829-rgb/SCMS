@@ -14,6 +14,7 @@
   --color-bg-sunken:      #E8EBF0;   /* Input fields, inactive zones */
   --color-primary:        #1B3A6B;   /* Deep Navy — brand anchor */
   --color-primary-light:  #2754A0;   /* Hover/active state */
+  --color-primary-dark:   #102848;   /* Darkest navy — button text on gold bg */
   --color-accent:         #E8A020;   /* Gold — premium highlight */
   --color-accent-soft:    #FFF3D6;   /* Gold tint — badge backgrounds */
   --color-success:        #1A7F5A;   /* Deep green */
@@ -131,6 +132,10 @@ h1, h2, h3, h4, h5, h6 {
 .text-xl { font-size: var(--text-xl); }
 .text-2xl { font-size: var(--text-2xl); }
 .text-3xl { font-size: var(--text-3xl); }
+
+/* Referenced in templates as 'text-primary-scms' and 'text-accent' */
+.text-primary-scms { color: var(--color-primary) !important; }
+.text-accent        { color: var(--color-accent)  !important; }
 
 .font-display { font-family: var(--font-display); }
 .font-body { font-family: var(--font-body); }

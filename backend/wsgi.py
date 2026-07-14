@@ -2,9 +2,15 @@
 wsgi.py
 Production WSGI entry point — loaded by Gunicorn.
 
-Schema management is handled EXCLUSIVELY by `flask db upgrade` which is
-run inside start.sh before Gunicorn starts. Do NOT call db.create_all()
-here; it bypasses migration constraints and causes silent schema drift.
+On every startup:
+  1. db.create_all() ensures all ORM-defined tables exist in PostgreSQL.
+     It is idempotent — it never drops or alters existing tables.
+     No flask-migrate history files exist, so this is the safe bootstrap path.
+  2. An admin account is seeded if none exists yet.
+Environment variables:
+  FLASK_ENV      - 'production' (default) or 'development'
+  ADMIN_EMAIL    - Admin login email (default: admin@scms.edu)
+  ADMIN_PASSWORD - Admin login password (default: Admin@1234)
 """
 import os
 from dotenv import load_dotenv
@@ -36,16 +42,16 @@ with app.app_context():
     # ------------------------------------------------------------------ #
     try:
         from app.models.user import User, RoleEnum
-        admin_email = "admin@bonsecours.edu.in"
+        admin_email    = os.environ.get("ADMIN_EMAIL",    "admin@scms.edu")
+        admin_password = os.environ.get("ADMIN_PASSWORD", "Admin@1234")
 
         if not User.query.filter_by(email=admin_email).first():
-            password = os.environ.get("ADMIN_PASSWORD", "Admin@SCMS2024!")
             admin = User(
                 email=admin_email,
                 role=RoleEnum.admin,
                 is_active=True,
             )
-            admin.set_password(password)
+            admin.set_password(admin_password)
             db.session.add(admin)
             db.session.commit()
             print(f"[OK] Admin created: {admin_email}")

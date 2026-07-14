@@ -35,7 +35,14 @@ def enter_marks():
 
     student_id = data["student_id"]
     course_id = data["course_id"]
-    academic_year = data["academic_year"].strip()
+    academic_year_raw = data.get("academic_year")
+    if not isinstance(academic_year_raw, str):
+        return jsonify({"error": "academic_year must be a string."}), 400
+
+    academic_year = academic_year_raw.strip()
+    import re
+    if not re.match(r"^\d{4}-\d{4}$", academic_year):
+        return jsonify({"error": "academic_year must match YYYY-YYYY format (e.g., 2024-2025)."}), 400
 
     student = db.session.get(Student, student_id)
     if not student:
@@ -48,6 +55,12 @@ def enter_marks():
     if current_user.role == RoleEnum.faculty:
         if not current_user.faculty_profile or course.faculty_id != current_user.faculty_profile.id:
             return jsonify({"error": "You are not assigned to this course."}), 403
+
+    # Verify student is enrolled in the course
+    from app.models.course import Enrollment
+    enrolled = Enrollment.query.filter_by(student_id=student_id, course_id=course_id).first()
+    if not enrolled:
+        return jsonify({"error": "Student is not enrolled in this course."}), 400
 
     faculty_id = current_user.faculty_profile.id if current_user.faculty_profile else None
 

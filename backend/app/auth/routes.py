@@ -112,6 +112,18 @@ def register():
             flash("Invalid role selected.", "danger")
             return render_template("auth/register.html", form=form, title="Register User")
 
+        # Preemptive duplicate checks for profile unique keys
+        if role_enum == RoleEnum.student:
+            roll_no = (form.roll_no.data or '').strip()
+            if Student.query.filter_by(roll_no=roll_no).first():
+                flash("That roll number is already in use.", "danger")
+                return render_template("auth/register.html", form=form, title="Register User")
+        elif role_enum == RoleEnum.faculty:
+            emp_id = (form.emp_id.data or '').strip()
+            if Faculty.query.filter_by(emp_id=emp_id).first():
+                flash("That employee ID is already in use.", "danger")
+                return render_template("auth/register.html", form=form, title="Register User")
+
         user = User(email=email, role=role_enum, is_active=True)
         user.set_password(form.password.data)
         db.session.add(user)

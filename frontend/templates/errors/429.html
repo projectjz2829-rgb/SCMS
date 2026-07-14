@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}429 – Too Many Requests - SCMS{% endblock %}
+{% block page_title %}Too Many Requests{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5 d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
+  <div class="text-center fade-in" style="max-width: 480px;">
+    <div style="font-size: 5rem; line-height: 1; margin-bottom: 1.5rem; color: var(--color-warning);">
+      <i class="bi bi-stopwatch-fill"></i>
+    </div>
+    <h1 style="font-family: var(--font-display); font-size: 5rem; font-weight: 800; color: var(--color-primary); line-height: 1;">429</h1>
+    <h2 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem;">Too Many Requests</h2>
+    <p class="text-muted mb-4" style="font-size: var(--text-sm);">
+      You've made too many requests in a short time. Please wait a moment and try again.
+      The login portal allows up to 5 attempts per minute.
+    </p>
+    <a href="{{ url_for('auth.login') }}" class="btn scms-btn-primary px-5 py-3">
+      <i class="bi bi-arrow-left-circle-fill me-2"></i>Back to Login
+    </a>
+  </div>
+</div>
+{% endblock %}

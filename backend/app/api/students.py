@@ -73,12 +73,14 @@ def create_student():
         return jsonify({"error": "Year must be 1 to 4."}), 400
 
     # ── Email normalisation ───────────────────────────────────────────── #
-    # Already lower-cased and stripped before the uniqueness check below.
-    email_norm = data["email"].strip().lower()
+    email_raw = data.get("email")
+    email_norm = str(email_raw).strip().lower() if email_raw is not None else ""
     if User.query.filter_by(email=email_norm).first():
         return jsonify({"error": "Email already registered."}), 409
 
-    if Student.query.filter_by(roll_no=data["roll_no"].strip()).first():
+    roll_no_raw = data.get("roll_no")
+    roll_no_norm = str(roll_no_raw).strip() if roll_no_raw is not None else ""
+    if Student.query.filter_by(roll_no=roll_no_norm).first():
         return jsonify({"error": "Roll number already exists."}), 409
 
     # ── Phone validation ─────────────────────────────────────────────── #
@@ -101,11 +103,11 @@ def create_student():
 
     student = Student(
         user_id=user.id,
-        roll_no=data["roll_no"].strip(),
-        full_name=data["full_name"].strip(),
-        dept=data["dept"].strip(),
+        roll_no=roll_no_norm,
+        full_name=str(data.get("full_name", "")).strip(),
+        dept=str(data.get("dept", "")).strip(),
         year=year_val,
-        section=data["section"].strip(),
+        section=str(data.get("section", "")).strip(),
         phone=phone_val or None,
     )
     db.session.add(student)
@@ -141,7 +143,29 @@ def update_student(student_id: int):
         return jsonify({"error": "Student not found."}), 404
 
     data = request.get_json(silent=True) or {}
-    updatable = ("full_name", "dept", "year", "section", "phone")
+
+    # Validate year if it is being updated
+    if "year" in data:
+        try:
+            year_val = int(data["year"])
+            if not (1 <= year_val <= 4):
+                return jsonify({"error": "Year must be 1 to 4."}), 400
+            student.year = year_val
+        except (ValueError, TypeError):
+            return jsonify({"error": "Year must be an integer."}), 400
+
+    # Validate phone format if it is being updated
+    if "phone" in data:
+        phone_raw = data.get("phone", "") or ""
+        phone_val = phone_raw.strip()
+        if phone_val:
+            if not re.fullmatch(r"[0-9+\-\s]{7,15}", phone_val):
+                return jsonify({"error": "Invalid phone number format."}), 400
+            student.phone = phone_val
+        else:
+            student.phone = None
+
+    updatable = ("full_name", "dept", "section")
     for field in updatable:
         if field in data:
             value = data[field]
@@ -157,11 +181,22 @@ def update_student(student_id: int):
 @login_required
 @role_required("admin")
 def delete_student(student_id: int):
-    """DELETE /api/students/<id> — Admin only."""
+    """DELETE /api/students/<id> — Admin only.
+
+    Deletes the User account, which cascades to the Student profile
+    (and all linked Enrollments, Attendance, and Marks via FK CASCADE).
+    Deleting only the Student row was a security bug — it left the
+    User account intact, allowing the deleted student to still log in.
+    """
     student = _get_student_or_404(student_id)
     if not student:
         return jsonify({"error": "Student not found."}), 404
-    db.session.delete(student)
+    # Delete the parent User account; SQLAlchemy cascade removes the Student profile.
+    user = student.user
+    if user:
+        db.session.delete(user)
+    else:
+        db.session.delete(student)  # fallback: orphaned profile with no User
     db.session.commit()
     return jsonify({"message": "Student deleted."}), 200
 

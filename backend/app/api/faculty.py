@@ -56,12 +56,14 @@ def create_faculty():
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
     # ── Email normalisation ───────────────────────────────────────────── #
-    # strip() + lower() applied before the uniqueness check (confirmed present).
-    email_norm = data["email"].strip().lower()
+    email_raw = data.get("email")
+    email_norm = str(email_raw).strip().lower() if email_raw is not None else ""
     if User.query.filter_by(email=email_norm).first():
         return jsonify({"error": "Email already registered."}), 409
 
-    if Faculty.query.filter_by(emp_id=data["emp_id"].strip()).first():
+    emp_id_raw = data.get("emp_id")
+    emp_id_norm = str(emp_id_raw).strip() if emp_id_raw is not None else ""
+    if Faculty.query.filter_by(emp_id=emp_id_norm).first():
         return jsonify({"error": "Employee ID already exists."}), 409
 
     # ── Phone validation ─────────────────────────────────────────────── #
@@ -84,10 +86,10 @@ def create_faculty():
 
     faculty = Faculty(
         user_id=user.id,
-        emp_id=data["emp_id"].strip(),
-        full_name=data["full_name"].strip(),
-        dept=data["dept"].strip(),
-        designation=data["designation"].strip(),
+        emp_id=emp_id_norm,
+        full_name=str(data.get("full_name", "")).strip(),
+        dept=str(data.get("dept", "")).strip(),
+        designation=str(data.get("designation", "")).strip(),
         phone=phone_val or None,
     )
     db.session.add(faculty)
@@ -123,7 +125,18 @@ def update_faculty(faculty_id: int):
         return jsonify({"error": "Faculty not found."}), 404
 
     data = request.get_json(silent=True) or {}
-    for field in ("full_name", "dept", "designation", "phone"):
+    # Validate phone format if it is being updated
+    if "phone" in data:
+        phone_raw = data.get("phone", "") or ""
+        phone_val = phone_raw.strip()
+        if phone_val:
+            if not re.fullmatch(r"[0-9+\-\s]{7,15}", phone_val):
+                return jsonify({"error": "Invalid phone number format."}), 400
+            faculty.phone = phone_val
+        else:
+            faculty.phone = None
+
+    for field in ("full_name", "dept", "designation"):
         if field in data:
             val = data[field]
             if isinstance(val, str):
@@ -138,11 +151,22 @@ def update_faculty(faculty_id: int):
 @login_required
 @role_required("admin")
 def delete_faculty(faculty_id: int):
-    """DELETE /api/faculty/<id> — Admin only."""
+    """DELETE /api/faculty/<id> — Admin only.
+
+    Deletes the User account, which cascades to the Faculty profile
+    (and all linked courses lose their faculty_id via SET NULL).
+    Deleting only the Faculty row was a security bug — it left the
+    User account intact, allowing the deleted faculty to still log in.
+    """
     faculty = _get_faculty_or_none(faculty_id)
     if not faculty:
         return jsonify({"error": "Faculty not found."}), 404
-    db.session.delete(faculty)
+    # Delete the parent User account; SQLAlchemy cascade removes Faculty profile.
+    user = faculty.user
+    if user:
+        db.session.delete(user)
+    else:
+        db.session.delete(faculty)  # fallback: orphaned profile with no User
     db.session.commit()
     return jsonify({"message": "Faculty deleted."}), 200
 

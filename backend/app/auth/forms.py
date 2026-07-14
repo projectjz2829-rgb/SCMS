@@ -22,7 +22,7 @@ class LoginForm(FlaskForm):
         "Password",
         validators=[
             DataRequired(message="Password is required."),
-            Length(min=8, max=128, message="Password must be 8–128 characters."),
+            Length(max=128, message="Password must be 128 characters or fewer."),
         ],
     )
     submit = SubmitField("Sign In")
@@ -117,13 +117,10 @@ class RegisterForm(FlaskForm):
         """
         Beyond the per-field validators above, enforce that the fields
         required to build a Student or Faculty profile are present when
-        that role is selected. Without this, an admin could submit the
-        form with e.g. role=student and no roll_no, which would pass form
-        validation but then blow up as an unhandled database
-        IntegrityError (roll_no is NOT NULL) when the route tries to save.
+        that role is selected. Runs in a single pass alongside standard
+        validators to display all errors at once.
         """
-        if not super().validate(extra_validators=extra_validators):
-            return False
+        success = super().validate(extra_validators=extra_validators)
 
         if self.role.data == "student":
             missing = []
@@ -139,7 +136,7 @@ class RegisterForm(FlaskForm):
                 self.roll_no.errors.append(
                     "Roll number, department, year, and section are required for student accounts."
                 )
-                return False
+                success = False
 
         elif self.role.data == "faculty":
             missing = []
@@ -153,6 +150,6 @@ class RegisterForm(FlaskForm):
                 self.emp_id.errors.append(
                     "Employee ID, department, and designation are required for faculty accounts."
                 )
-                return False
+                success = False
 
-        return True
+        return success

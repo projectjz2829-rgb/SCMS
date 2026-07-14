@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}400 – Bad Request - SCMS{% endblock %}
+{% block page_title %}Bad Request{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5 d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
+  <div class="text-center fade-in" style="max-width: 480px;">
+    <div style="font-size: 5rem; line-height: 1; margin-bottom: 1.5rem; color: var(--color-warning);">
+      <i class="bi bi-shield-slash-fill"></i>
+    </div>
+    <h1 style="font-family: var(--font-display); font-size: 5rem; font-weight: 800; color: var(--color-primary); line-height: 1;">400</h1>
+    <h2 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem;">Bad Request</h2>
+    <p class="text-muted mb-4" style="font-size: var(--text-sm);">
+      The request could not be understood or validated by the server. This can happen if your session/security token has expired. Please try refreshing the page or logging in again.
+    </p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn scms-btn-primary px-5 py-3">
+      <i class="bi bi-house-fill me-2"></i>Go to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

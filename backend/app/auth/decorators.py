@@ -42,6 +42,9 @@ def role_required(*roles: str):
                     # Unknown role name — treat as forbidden
                     abort(403)
 
+            if not current_user.is_authenticated:
+                abort(401)
+
             if current_user.role not in allowed:
                 abort(403)
 

@@ -33,8 +33,8 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "--email",
-    default="admin@bonsecours.edu.in",
-    help="Admin email address (default: admin@bonsecours.edu.in)",
+    default="admin@scms.edu",
+    help="Admin email address (default: admin@scms.edu)",
 )
 parser.add_argument(
     "--password",
@@ -55,10 +55,10 @@ DEFAULT_EMAIL = args.email
 # 1. Check --password argument
 # 2. Check positional argument (sys.argv[1])
 # 3. Check environment variable ADMIN_PASSWORD
-# 4. Fallback to default "Admin@SCMS2024!"
+# 4. Fallback to default "Admin@1234"
 password = args.password or args.password_pos
 if not password:
-    password = os.environ.get("ADMIN_PASSWORD", "Admin@SCMS2024!")
+    password = os.environ.get("ADMIN_PASSWORD", "Admin@1234")
 
 app = create_app(os.environ.get("FLASK_ENV", "development"))
 

@@ -7,7 +7,7 @@ Follows the Flask Application Factory pattern to support multiple configs
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 
 # Load .env before any config is read
 load_dotenv()
@@ -115,17 +115,39 @@ def create_app(config_name: str = "default") -> Flask:
         # ------------------------------------------------------------------ #
         #  Error handlers                                                       #
         # ------------------------------------------------------------------ #
+        from flask import request as flask_request
+
+        def _wants_json():
+            """Return True if the request expects a JSON response."""
+            return (
+                flask_request.is_json
+                or flask_request.path.startswith("/api/")
+                or 'application/json' in flask_request.headers.get('Accept', '')
+            )
+
+        @app.errorhandler(400)
+        def bad_request(e):
+            if _wants_json():
+                return jsonify({"error": "Bad Request", "message": str(e)}), 400
+            return render_template("errors/400.html", title="Bad Request"), 400
+
         @app.errorhandler(403)
         def forbidden(e):
-            return jsonify({"error": "Forbidden", "message": str(e)}), 403
+            if _wants_json():
+                return jsonify({"error": "Forbidden", "message": str(e)}), 403
+            return render_template("errors/403.html", title="Access Denied"), 403
 
         @app.errorhandler(404)
         def not_found(e):
-            return jsonify({"error": "Not Found", "message": str(e)}), 404
+            if _wants_json():
+                return jsonify({"error": "Not Found", "message": str(e)}), 404
+            return render_template("errors/404.html", title="Page Not Found"), 404
 
         @app.errorhandler(429)
         def rate_limited(e):
-            return jsonify({"error": "Too Many Requests", "message": str(e)}), 429
+            if _wants_json():
+                return jsonify({"error": "Too Many Requests", "message": str(e)}), 429
+            return render_template("errors/429.html", title="Too Many Requests"), 429
 
         @app.errorhandler(500)
         def internal_error(e):
@@ -134,10 +156,12 @@ def create_app(config_name: str = "default") -> Flask:
             # exception details (stack traces, file paths, SQL, etc.) to
             # the client — that's an information-disclosure risk.
             app.logger.exception("Unhandled server error")
-            return jsonify({
-                "error": "Internal Server Error",
-                "message": "Something went wrong on our end. Please try again later."
-            }), 500
+            if _wants_json():
+                return jsonify({
+                    "error": "Internal Server Error",
+                    "message": "Something went wrong on our end. Please try again later."
+                }), 500
+            return render_template("errors/500.html", title="Server Error"), 500
 
         # ------------------------------------------------------------------ #
         #  Logging — stdout for PaaS (Render captures stdout/stderr only)   #
