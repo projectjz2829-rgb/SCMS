@@ -269,30 +269,93 @@
       setInterval(tick, 1000);
     })();
 
-    // Mobile sidebar toggle
+    // ── Mobile Sidebar Toggle ──────────────────────────────────────────────
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
+
     function openSidebar() {
       sidebar && sidebar.classList.add('open');
       overlay && overlay.classList.add('visible');
+      document.body.style.overflow = 'hidden'; // prevent background scroll when sidebar open
     }
     function closeSidebar() {
       sidebar && sidebar.classList.remove('open');
       overlay && overlay.classList.remove('visible');
+      document.body.style.overflow = '';
     }
     document.getElementById('sidebarToggleMobile')?.addEventListener('click', openSidebar);
     document.getElementById('sidebarToggle')?.addEventListener('click', closeSidebar);
     overlay?.addEventListener('click', closeSidebar);
 
-    // Delegate Mobile Bottom Nav Clicks to Sidebar Nav elements
-    document.getElementById('mb-nav-students')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-students')?.click(); });
-    document.getElementById('mb-nav-faculty')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-faculty')?.click(); });
-    document.getElementById('mb-nav-courses')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-courses')?.click(); });
-    document.getElementById('mb-nav-my-courses')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-my-courses')?.click(); });
-    document.getElementById('mb-nav-attendance-panel')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-attendance-panel')?.click(); });
-    document.getElementById('mb-nav-marks-panel')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-marks-panel')?.click(); });
-    document.getElementById('mb-nav-my-attendance')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-my-attendance')?.click(); });
-    document.getElementById('mb-nav-my-marks')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('nav-my-marks')?.click(); });
+    // ── Sidebar nav link scroll helper ────────────────────────────────────
+    // For links like #nav-students that scroll the page to a section instead
+    // of navigating away. The target section IDs match those set in the
+    // dashboard template (e.g. id="section-students").
+    const dashboardUrl =
+      {% if current_user.is_authenticated %}
+        {% if current_user.role.value == 'admin' %}
+          "{{ url_for('dashboard.admin_dashboard') }}"
+        {% elif current_user.role.value == 'faculty' %}
+          "{{ url_for('dashboard.faculty_dashboard') }}"
+        {% elif current_user.role.value == 'student' %}
+          "{{ url_for('dashboard.student_dashboard') }}"
+        {% else %}
+          "/"
+        {% endif %}
+      {% else %}
+        "/"
+      {% endif %};
+
+    function scrollToSection(sectionId) {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        closeSidebar(); // close drawer first on mobile
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200); // small delay lets sidebar close animation finish
+      } else {
+        closeSidebar();
+        window.location.href = dashboardUrl + '#' + sectionId;
+      }
+    }
+
+    // Scroll to section on page load if hash exists
+    window.addEventListener('load', () => {
+      if (window.location.hash) {
+        const el = document.getElementById(window.location.hash.substring(1));
+        if (el) {
+          setTimeout(() => {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 300);
+        }
+      }
+    });
+
+    // Wire sidebar nav scroll links (admin)
+    document.getElementById('nav-students')?.addEventListener('click', (e) => { e.preventDefault(); scrollToSection('section-students'); });
+    document.getElementById('nav-faculty')?.addEventListener('click',   (e) => { e.preventDefault(); scrollToSection('section-faculty'); });
+    document.getElementById('nav-courses')?.addEventListener('click',   (e) => { e.preventDefault(); scrollToSection('section-courses'); });
+
+    // Wire sidebar nav scroll links (faculty)
+    document.getElementById('nav-my-courses')?.addEventListener('click',       (e) => { e.preventDefault(); scrollToSection('section-my-courses'); });
+    document.getElementById('nav-attendance-panel')?.addEventListener('click', (e) => { e.preventDefault(); scrollToSection('section-attendance'); });
+    document.getElementById('nav-marks-panel')?.addEventListener('click',      (e) => { e.preventDefault(); scrollToSection('section-marks'); });
+
+    // Wire sidebar nav scroll links (student)
+    document.getElementById('nav-my-attendance')?.addEventListener('click', (e) => { e.preventDefault(); scrollToSection('section-my-attendance'); });
+    document.getElementById('nav-my-marks')?.addEventListener('click',      (e) => { e.preventDefault(); scrollToSection('section-my-marks'); });
+
+    // ── Mobile Bottom Nav ─────────────────────────────────────────────────
+    // Bottom nav links scroll directly to the correct section and close
+    // the sidebar if it is open. No need to proxy through sidebar links.
+    document.getElementById('mb-nav-students')?.addEventListener('click',         (e) => { e.preventDefault(); scrollToSection('section-students'); });
+    document.getElementById('mb-nav-faculty')?.addEventListener('click',          (e) => { e.preventDefault(); scrollToSection('section-faculty'); });
+    document.getElementById('mb-nav-courses')?.addEventListener('click',          (e) => { e.preventDefault(); scrollToSection('section-courses'); });
+    document.getElementById('mb-nav-my-courses')?.addEventListener('click',       (e) => { e.preventDefault(); scrollToSection('section-my-courses'); });
+    document.getElementById('mb-nav-attendance-panel')?.addEventListener('click', (e) => { e.preventDefault(); scrollToSection('section-attendance'); });
+    document.getElementById('mb-nav-marks-panel')?.addEventListener('click',      (e) => { e.preventDefault(); scrollToSection('section-marks'); });
+    document.getElementById('mb-nav-my-attendance')?.addEventListener('click',    (e) => { e.preventDefault(); scrollToSection('section-my-attendance'); });
+    document.getElementById('mb-nav-my-marks')?.addEventListener('click',         (e) => { e.preventDefault(); scrollToSection('section-my-marks'); });
   </script>
 
   {% block extra_scripts %}{% endblock %}

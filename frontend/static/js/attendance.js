@@ -15,8 +15,8 @@
 'use strict';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Guard: only run on faculty dashboard
-  if (!document.getElementById('attendancePanel')) return;
+  // Guard: only run on faculty dashboard (section-attendance is the renamed attendancePanel)
+  if (!document.getElementById('section-attendance')) return;
 
   initAttendancePanel();
   initMarksPanel();
