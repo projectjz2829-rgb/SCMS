@@ -16,7 +16,7 @@ CRITICAL FIXES:
 - start.sh: flask db upgrade running on Render under set -e could crash the deployment startup when no migrations exist. Appended fallback to ignore upgrade errors safely.
 
 OTHER FIXES:
-- campus.css: Added missing --color-primary-dark CSS variable (referenced by secondary button text color but never defined, causing invisible text). Added .text-primary-scms and .text-accent utility classes.
+- campus.css: Added missing --color-primary-dark CSS variable. Added .text-primary-scms and .text-accent utility classes. Hid the mobile bottom navigation menu bar by default on desktop/tablet views to prevent visual layout breaking.
 - app/__init__.py: 403/404/429 error handlers now return HTML for browser navigation and JSON only for API requests (previously always returned JSON, showing raw JSON to users navigating to wrong URLs).
 - wsgi.py: Fixed contradictory docstring, admin email now reads from ADMIN_EMAIL env var for Render deployment consistency.
 - seed_admin.py & setup.bat: Normalized default admin email/password to 'admin@scms.edu' / 'Admin@1234' to match wsgi.py and README.md.
