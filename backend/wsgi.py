@@ -18,9 +18,21 @@ app = create_app(os.environ.get("FLASK_ENV", "production"))
 
 with app.app_context():
     # ------------------------------------------------------------------ #
+    #  Ensure all tables exist.                                           #
+    #  db.create_all() is safe to call on every startup — it only        #
+    #  creates tables that are missing and never drops or alters          #
+    #  existing ones. Since no migration version files exist yet,         #
+    #  flask db upgrade does nothing, so this is required to             #
+    #  initialise the PostgreSQL schema on Render.                        #
+    # ------------------------------------------------------------------ #
+    try:
+        db.create_all()
+        print("[OK] Database tables verified/created")
+    except Exception as exc:
+        print(f"[WARN] db.create_all() skipped: {exc}")
+
+    # ------------------------------------------------------------------ #
     #  Admin seeding — idempotent, safe to run on every startup.          #
-    #  The schema must already exist at this point (created by            #
-    #  `flask db upgrade` in start.sh).                                   #
     # ------------------------------------------------------------------ #
     try:
         from app.models.user import User, RoleEnum
@@ -39,11 +51,9 @@ with app.app_context():
             print(f"[OK] Admin created: {admin_email}")
         else:
             print(f"[OK] Admin already exists: {admin_email}")
-    except Exception as exc:  # noqa: BLE001
-        # On first deploy the DB may not be ready yet — log and continue;
-        # start.sh runs migrations before this code runs so this is
-        # only a safety net for edge cases (e.g. connection refused).
+    except Exception as exc:
         print(f"[WARN] Admin seeding skipped: {exc}")
+
 
 if __name__ == "__main__":
     app.run()

@@ -62,12 +62,14 @@ class RegisterForm(FlaskForm):
     role = SelectField(
         "Role",
         choices=[
-            ("admin", "Admin"),
-            ("faculty", "Faculty"),
             ("student", "Student"),
+            ("faculty", "Faculty"),
+            ("admin", "Admin"),
         ],
+        default="student",
         validators=[DataRequired()],
     )
+
     full_name = StringField(
         "Full Name",
         validators=[DataRequired(), Length(min=2, max=100)],

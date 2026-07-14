@@ -120,22 +120,22 @@ def register():
         if role_enum == RoleEnum.student:
             profile = Student(
                 user_id=user.id,
-                roll_no=form.roll_no.data.strip(),
-                full_name=form.full_name.data.strip(),
-                dept=form.dept.data.strip(),
+                roll_no=(form.roll_no.data or '').strip(),
+                full_name=(form.full_name.data or '').strip(),
+                dept=(form.dept.data or '').strip(),
                 year=int(form.year.data) if form.year.data else 1,
-                section=form.section.data.strip(),
-                phone=(form.phone.data or "").strip() or None,
+                section=(form.section.data or '').strip(),
+                phone=(form.phone.data or '').strip() or None,
             )
             db.session.add(profile)
         elif role_enum == RoleEnum.faculty:
             profile = Faculty(
                 user_id=user.id,
-                emp_id=form.emp_id.data.strip(),
-                full_name=form.full_name.data.strip(),
-                dept=form.dept.data.strip(),
-                designation=form.designation.data.strip(),
-                phone=(form.phone.data or "").strip() or None,
+                emp_id=(form.emp_id.data or '').strip(),
+                full_name=(form.full_name.data or '').strip(),
+                dept=(form.dept.data or '').strip(),
+                designation=(form.designation.data or '').strip(),
+                phone=(form.phone.data or '').strip() or None,
             )
             db.session.add(profile)
 
@@ -148,6 +148,14 @@ def register():
 
         flash(f"Account created for {email}.", "success")
         return redirect(url_for("dashboard.admin_dashboard"))
+
+    # Form validation failed — collect all errors and flash them
+    errors = []
+    for field_name, field_errors in form.errors.items():
+        for err in field_errors:
+            errors.append(f"{field_name}: {err}")
+    if errors:
+        flash("Please fix the following errors: " + " | ".join(errors), "danger")
 
     return render_template("auth/register.html", form=form, title="Register User")
 

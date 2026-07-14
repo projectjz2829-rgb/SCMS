@@ -34,8 +34,7 @@
             </div>
             <div class="col-md-6">
               <label for="role" class="form-label scms-label">Role</label>
-              {{ form.role(id="role", class="form-select scms-input" ~ (" is-invalid" if form.role.errors else ""),
-              onchange="toggleRoleFields(this.value)") }}
+              {{ form.role(id="role", class="form-select scms-input" ~ (" is-invalid" if form.role.errors else "")) }}
               {% for e in form.role.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-md-6">
