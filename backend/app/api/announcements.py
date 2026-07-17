@@ -14,7 +14,7 @@ def _log_activity(action, desc):
         action=action,
         description=desc,
         performed_by=current_user.id if current_user.is_authenticated else None,
-        role=current_user.role.value if current_user.is_authenticated else "system"
+        role=current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role) if current_user.is_authenticated else "system"
     )
     db.session.add(log)
 
@@ -58,7 +58,10 @@ def create_announcement():
     )
     if data.get("expiry_date"):
         try:
-            ann.expiry_date = datetime.fromisoformat(data["expiry_date"])
+            dt = datetime.fromisoformat(data["expiry_date"])
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            ann.expiry_date = dt
         except ValueError:
             pass
             
