@@ -9,8 +9,8 @@ from .faculty import faculty_bp
 from .courses import courses_bp
 from .attendance import attendance_bp
 from .marks import marks_bp
-
-
+from .announcements import announcements_bp
+from .activities import activities_bp
 
 def register_api_blueprints(app):
     """Register every API sub-blueprint onto the app."""
@@ -19,6 +19,7 @@ def register_api_blueprints(app):
     app.register_blueprint(courses_bp, url_prefix="/api/courses")
     app.register_blueprint(attendance_bp, url_prefix="/api/attendance")
     app.register_blueprint(marks_bp, url_prefix="/api/marks")
-
+    app.register_blueprint(announcements_bp, url_prefix="/api/announcements")
+    app.register_blueprint(activities_bp, url_prefix="/api/activities")
 
 __all__ = ["register_api_blueprints"]
