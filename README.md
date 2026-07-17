@@ -28,23 +28,25 @@
 
 ### 👨‍💼 Admin
 - **Dashboard** — Live stats (students, faculty, courses, attendance %)
+- **Activity Feed** — Real-time tracking of CRUD operations and system events
 - **User Management** — Add student/faculty/admin accounts via form
 - **Course Management** — Create courses with code, department, semester
 - **Delete** — Remove students or faculty with confirmation modal
-- **Broadcast** — Send campus-wide announcements to all students
+- **Broadcast System** — Send, edit, and pin real-time campus-wide announcements
 - **Charts** — Department-wise attendance bar chart + student distribution donut
 
 ### 👨‍🏫 Faculty
 - **My Courses** — View only courses assigned to this faculty
 - **Attendance** — Select course + date → load student roster → P/L/A toggle → submit
 - **Marks Entry** — Pre-populated marks table; upserts records per student per course
+- **Bulletin Board** — Live syncing campus announcements
 - **Attendance Chart** — Bar chart per course showing overall attendance %
 
 ### 🎓 Student
 - **Dashboard** — Attendance ring (circular SVG), per-subject progress bars
 - **Shortage Alert** — Red banner auto-appears if any subject is below 75%
 - **Marks Ledger** — IA1, IA2, Semester Final, Practical scores with colour coding
-- **Bulletin Board** — Campus announcements (broadcasts from admin)
+- **Bulletin Board** — Live syncing campus announcements with notification badges
 
 ---
 
@@ -267,6 +269,19 @@ All API endpoints are protected by `@login_required`. Admin-only routes addition
 |--------|-----|------|-------------|
 | `POST` | `/api/marks/` | Faculty | Upsert marks for a student |
 | `GET` | `/api/marks/course/<id>` | Faculty | All marks for a course |
+
+### Announcements
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| `GET` | `/api/announcements/` | Any | List all active announcements |
+| `POST` | `/api/announcements/` | Admin | Create an announcement |
+| `PUT` | `/api/announcements/<id>` | Admin | Edit an announcement |
+| `DELETE` | `/api/announcements/<id>` | Admin | Delete an announcement |
+
+### Activities
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| `GET` | `/api/activities/` | Admin | Fetch system activity feed |
 
 ---
 
