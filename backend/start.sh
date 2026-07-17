@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 echo "==> Running migrations..."
+export FLASK_APP=wsgi:app
 flask db upgrade || echo "==> Migrations skipped or failed (using db.create_all fallback)"
 echo "==> Starting server..."
 exec gunicorn wsgi:app --workers 2 --threads 2 --bind 0.0.0.0:$PORT --log-level warning --access-logfile -

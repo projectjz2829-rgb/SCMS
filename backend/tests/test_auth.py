@@ -118,7 +118,12 @@ class TestLogin:
 class TestLogout:
     def test_logout_clears_session(self, client):
         login(client, "admin@scms.test", "AdminPass1!")
-        res = client.post("/auth/logout", data={"csrf_token": "test"}, follow_redirects=True)
+        # Do not follow redirects so we can inspect the headers of the logout response itself
+        res = client.post("/auth/logout", data={"csrf_token": "test"}, follow_redirects=False)
+        assert res.status_code == 302
+        assert "no-store" in res.headers.get("Cache-Control", "")
+        assert res.headers.get("Pragma") == "no-cache"
+        
         # After logout, accessing dashboard should redirect to login
         dash_res = client.get("/dashboard/admin", follow_redirects=True)
         assert b"Sign In" in dash_res.data or dash_res.status_code == 200

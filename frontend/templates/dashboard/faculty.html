@@ -26,6 +26,50 @@
     </div>
   </div>
 
+  {# ── Faculty stat cards ── #}
+  <div class="row g-4 mb-4" id="faculty-stat-cards">
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-courses p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-book-fill fs-4"></i></div>
+          <span class="badge role-badge">Courses</span>
+        </div>
+        <p class="stat-number" id="fac-stat-courses">-</p>
+        <span class="stat-label">Assigned Courses</span>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-students p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-mortarboard-fill fs-4"></i></div>
+          <span class="badge role-badge">Students</span>
+        </div>
+        <p class="stat-number" id="fac-stat-students">-</p>
+        <span class="stat-label">Total Enrolled</span>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-attendance p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-calendar-check-fill fs-4"></i></div>
+          <span class="badge role-badge">Attendance</span>
+        </div>
+        <p class="stat-number" id="fac-stat-att">-</p>
+        <span class="stat-label">Overall Avg. Attendance</span>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-faculty p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-clipboard2-data-fill fs-4"></i></div>
+          <span class="badge role-badge">Marks</span>
+        </div>
+        <p class="stat-number" id="fac-stat-pending">-</p>
+        <span class="stat-label">Pending Marks (courses)</span>
+      </div>
+    </div>
+  </div>
+
   <div class="row g-4">
 
     {# ── Left column: My courses + chart ── #}
@@ -126,7 +170,7 @@
         </div>
 
         <div id="marksTableContainer" style="display:none;" class="mt-3">
-          <div class="table-responsive-card">
+          <div class="table-responsive">
             <table class="table scms-table" id="marksTable">
               <thead>
                 <tr>

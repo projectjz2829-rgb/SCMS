@@ -28,6 +28,7 @@ class Marks(db.Model):
         db.Integer,
         db.ForeignKey("courses.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     internal_1 = db.Column(db.Integer, default=0, nullable=False)
     internal_2 = db.Column(db.Integer, default=0, nullable=False)
@@ -53,6 +54,24 @@ class Marks(db.Model):
     )
 
     def to_dict(self) -> dict:
+        # Calculate total and grade dynamically without modifying schema
+        total = self.internal_1 + self.internal_2 + self.semester_final + self.practical
+        max_marks = 175  # Assuming standard 25+25+75+50 setup
+        
+        pct = (total / max_marks) * 100 if max_marks > 0 else 0
+        if pct >= 90:
+            grade, point = "O", 10.0
+        elif pct >= 80:
+            grade, point = "A+", 9.0
+        elif pct >= 70:
+            grade, point = "A", 8.0
+        elif pct >= 60:
+            grade, point = "B+", 7.0
+        elif pct >= 50:
+            grade, point = "B", 6.0
+        else:
+            grade, point = "U", 0.0
+
         return {
             "id": self.id,
             "student_id": self.student_id,
@@ -63,6 +82,9 @@ class Marks(db.Model):
             "internal_2": self.internal_2,
             "semester_final": self.semester_final,
             "practical": self.practical,
+            "total_earned": total,
+            "grade": grade,
+            "grade_point": point,
             "entered_by": self.entered_by,
             "academic_year": self.academic_year,
             "created_at": self.created_at.isoformat(),

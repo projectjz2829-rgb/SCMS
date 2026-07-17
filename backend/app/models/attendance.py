@@ -32,6 +32,7 @@ class Attendance(db.Model):
         db.Integer,
         db.ForeignKey("courses.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.Enum(AttendanceStatusEnum), nullable=False)

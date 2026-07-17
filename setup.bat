@@ -48,7 +48,7 @@ if not exist instance mkdir instance
 REM ── Step 2: Install Python dependencies ──────────────────────────────────
 echo [2/6] Installing Python dependencies...
 python -m pip install --upgrade pip --quiet
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] pip install failed. Check your internet connection or requirements.txt.
     pause & exit /B 1

@@ -27,23 +27,26 @@ def role_required(*roles: str):
         def admin_or_faculty_view():
             ...
 
+    Returns HTTP 401 if the user is not authenticated.
     Returns HTTP 403 if the authenticated user's role is not in *roles*.
     """
 
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            # Convert string roles to RoleEnum members for comparison
+            # Check authentication first — before any role resolution.
+            if not current_user.is_authenticated:
+                abort(401)
+
+            # Convert string roles to RoleEnum members for comparison.
             allowed = set()
             for r in roles:
                 try:
                     allowed.add(RoleEnum[r])
                 except KeyError:
-                    # Unknown role name — treat as forbidden
+                    # Unknown role name in decorator call — treat as programmer
+                    # error and refuse access rather than silently allowing it.
                     abort(403)
-
-            if not current_user.is_authenticated:
-                abort(401)
 
             if current_user.role not in allowed:
                 abort(403)

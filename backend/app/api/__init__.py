@@ -10,7 +10,6 @@ from .courses import courses_bp
 from .attendance import attendance_bp
 from .marks import marks_bp
 
-api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 
 def register_api_blueprints(app):

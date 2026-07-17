@@ -81,7 +81,7 @@ with app.app_context():
     print("=" * 50)
     print("  Admin account created successfully!")
     print(f"  Email:    {DEFAULT_EMAIL}")
-    print(f"  Password: {password}")
+    print("  Password: [hidden for security]")
     print("=" * 50)
     print()
     print("[TIP] Set ADMIN_PASSWORD in your .env to override the default password.")

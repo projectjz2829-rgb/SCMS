@@ -33,20 +33,46 @@ async function apiRequest(method, url, data = null) {
     options.body = JSON.stringify(data);
   }
 
-  const res = await fetch(url, options);
-
-  // Try to parse JSON even on error responses for richer error messages
-  let body;
-  const contentType = res.headers.get('Content-Type') || '';
-  if (contentType.includes('application/json')) {
-    body = await res.json();
-  } else {
-    body = await res.text();
+  let res, body;
+  try {
+    res = await fetch(url, options);
+    const contentType = res.headers.get('Content-Type') || '';
+    if (contentType.includes('application/json')) {
+      body = await res.json();
+    } else {
+      body = await res.text();
+    }
+  } catch (err) {
+    // This catches actual network failures (DNS, timeout, server completely down)
+    const msg = 'Network connection failed. Please check your internet connection and try again.';
+    if (typeof showToast === 'function') {
+      showToast(msg, 'danger');
+    }
+    throw new Error(msg);
   }
 
   if (!res.ok) {
-    const msg = (body && body.error) ? body.error : `HTTP ${res.status}`;
+    if (res.status === 401 || res.status === 403) {
+      if (window.location.pathname !== '/auth/login') {
+        window.location.href = '/auth/login';
+      }
+      return;
+    }
+    let msg = `Network request failed (HTTP ${res.status}). Please try again.`;
+    if (body) {
+      if (body.message) msg = body.message;
+      else if (body.error) msg = body.error;
+      
+      if (body.errors && Array.isArray(body.errors) && body.errors.length > 0) {
+        msg += '\n' + body.errors.join('\n');
+      }
+    }
     throw new Error(msg);
+  }
+
+  // Automatically unwrap standard API envelope if present
+  if (body && typeof body === 'object' && 'success' in body && 'data' in body) {
+    return body.data;
   }
 
   return body;
@@ -92,9 +118,13 @@ function showToast(message, type = 'success', duration = 3500) {
 
   setTimeout(() => {
     toast.style.opacity = '0';
-    toast.style.transform = 'translateX(20px)';
+    toast.style.transform = 'translateX(50px)';
     toast.style.transition = 'opacity 0.3s, transform 0.3s';
-    setTimeout(() => toast.remove(), 300);
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300); // Wait for transition to complete
   }, duration);
 }
 

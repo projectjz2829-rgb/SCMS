@@ -4,10 +4,11 @@ Faculty REST API — full CRUD plus courses sub-resource.
 IDOR protection: faculty can only read their own record; admin can read all.
 """
 import re
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
+from app.api.responses import success_response, error_response, handle_api_exceptions
 from app.extensions import db
 from app.models.faculty import Faculty
 from app.models.user import RoleEnum, User
@@ -38,118 +39,130 @@ def _idor_check_faculty(faculty: Faculty) -> bool:
 @faculty_bp.route("/", methods=["GET"])
 @login_required
 @role_required("admin")
+@handle_api_exceptions
 def list_faculty():
     """GET /api/faculty/ — Admin only."""
-    all_faculty = Faculty.query.order_by(Faculty.emp_id).all()
-    return jsonify([f.to_dict() for f in all_faculty]), 200
+    results = (
+        db.session.query(Faculty, User.email)
+        .join(User, User.id == Faculty.user_id)
+        .order_by(Faculty.emp_id)
+        .all()
+    )
+    return success_response([f.to_dict(email=e) for f, e in results])
 
 
 @faculty_bp.route("/", methods=["POST"])
 @login_required
 @role_required("admin")
+@handle_api_exceptions
 def create_faculty():
     """POST /api/faculty/ — Admin only."""
     data = request.get_json(silent=True) or {}
-    required = ("email", "password", "emp_id", "full_name", "dept", "designation")
-    missing = [f for f in required if not data.get(f)]
-    if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+    
+    from app.api.validators import validate_payload
+    schema = {
+        "email": {"type": str, "required": True, "max_length": 120, "regex": r"^[^@]+@[^@]+\.[^@]+$"},
+        "password": {"type": str, "required": True, "min_length": 6},
+        "emp_id": {"type": str, "required": True, "max_length": 20},
+        "full_name": {"type": str, "required": True, "max_length": 100},
+        "dept": {"type": str, "required": True, "max_length": 50},
+        "designation": {"type": str, "required": True, "max_length": 50},
+        "phone": {"type": str, "required": False, "min_length": 7, "max_length": 15, "regex": r"^[0-9+\-\s]+$"}
+    }
+    cleaned_data, err_resp = validate_payload(data, schema)
+    if err_resp:
+        return err_resp
 
-    # ── Email normalisation ───────────────────────────────────────────── #
-    email_raw = data.get("email")
-    email_norm = str(email_raw).strip().lower() if email_raw is not None else ""
+    email_norm = cleaned_data["email"].lower()
     if User.query.filter_by(email=email_norm).first():
-        return jsonify({"error": "Email already registered."}), 409
+        return error_response("Email already registered.", status_code=409)
 
-    emp_id_raw = data.get("emp_id")
-    emp_id_norm = str(emp_id_raw).strip() if emp_id_raw is not None else ""
+    emp_id_norm = cleaned_data["emp_id"]
     if Faculty.query.filter_by(emp_id=emp_id_norm).first():
-        return jsonify({"error": "Employee ID already exists."}), 409
-
-    # ── Phone validation ─────────────────────────────────────────────── #
-    # If provided and non-empty, only digits, +, -, and spaces are allowed
-    # and total length must be 7–15 characters (covers international formats).
-    phone_raw = data.get("phone", "") or ""
-    phone_val = phone_raw.strip()
-    if phone_val:
-        if not re.fullmatch(r"[0-9+\-\s]{7,15}", phone_val):
-            return jsonify({"error": "Invalid phone number format."}), 400
+        return error_response("Employee ID already exists.", status_code=409)
 
     user = User(
         email=email_norm,
         role=RoleEnum.faculty,
         is_active=True,
     )
-    user.set_password(data["password"])
-    db.session.add(user)
-    db.session.flush()
-
-    faculty = Faculty(
-        user_id=user.id,
-        emp_id=emp_id_norm,
-        full_name=str(data.get("full_name", "")).strip(),
-        dept=str(data.get("dept", "")).strip(),
-        designation=str(data.get("designation", "")).strip(),
-        phone=phone_val or None,
-    )
-    db.session.add(faculty)
+    user.set_password(cleaned_data["password"])
+    
     try:
+        db.session.add(user)
+        db.session.flush()
+
+        faculty = Faculty(
+            user_id=user.id,
+            emp_id=emp_id_norm,
+            full_name=cleaned_data["full_name"],
+            dept=cleaned_data["dept"],
+            designation=cleaned_data["designation"],
+            phone=cleaned_data.get("phone")
+        )
+        db.session.add(faculty)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return jsonify({"error": "Email or employee ID already in use."}), 409
-    return jsonify(faculty.to_dict()), 201
+        return error_response("Email or employee ID already in use.", status_code=409)
+        
+    return success_response(faculty.to_dict(), status_code=201)
 
 
 # ─────────────────────────── read / update / delete ─────────────────────── #
 
 @faculty_bp.route("/<int:faculty_id>", methods=["GET"])
 @login_required
+@role_required("admin", "faculty")
+@handle_api_exceptions
 def get_faculty(faculty_id: int):
     """GET /api/faculty/<id> — Admin or own faculty."""
     faculty = _get_faculty_or_none(faculty_id)
     if not faculty:
-        return jsonify({"error": "Faculty not found."}), 404
+        return error_response("Faculty not found.", status_code=404)
     if not _idor_check_faculty(faculty):
-        return jsonify({"error": "Access forbidden."}), 403
-    return jsonify(faculty.to_dict()), 200
+        return error_response("Access forbidden.", status_code=403)
+    return success_response(faculty.to_dict())
 
 
 @faculty_bp.route("/<int:faculty_id>", methods=["PUT"])
 @login_required
 @role_required("admin")
+@handle_api_exceptions
 def update_faculty(faculty_id: int):
     """PUT /api/faculty/<id> — Admin only."""
     faculty = _get_faculty_or_none(faculty_id)
     if not faculty:
-        return jsonify({"error": "Faculty not found."}), 404
+        return error_response("Faculty not found.", status_code=404)
 
     data = request.get_json(silent=True) or {}
-    # Validate phone format if it is being updated
-    if "phone" in data:
-        phone_raw = data.get("phone", "") or ""
-        phone_val = phone_raw.strip()
-        if phone_val:
-            if not re.fullmatch(r"[0-9+\-\s]{7,15}", phone_val):
-                return jsonify({"error": "Invalid phone number format."}), 400
-            faculty.phone = phone_val
-        else:
-            faculty.phone = None
+    
+    from app.api.validators import validate_payload
+    schema = {
+        "full_name": {"type": str, "required": False, "max_length": 100},
+        "dept": {"type": str, "required": False, "max_length": 50},
+        "designation": {"type": str, "required": False, "max_length": 50},
+        "phone": {"type": str, "required": False, "min_length": 7, "max_length": 15, "regex": r"^[0-9+\-\s]+$"}
+    }
+    cleaned_data, err_resp = validate_payload(data, schema)
+    if err_resp:
+        return err_resp
+
+    if "phone" in cleaned_data:
+        faculty.phone = cleaned_data["phone"]
 
     for field in ("full_name", "dept", "designation"):
-        if field in data:
-            val = data[field]
-            if isinstance(val, str):
-                val = val.strip() or None
-            setattr(faculty, field, val)
+        if field in cleaned_data and cleaned_data[field] is not None:
+            setattr(faculty, field, cleaned_data[field])
 
     db.session.commit()
-    return jsonify(faculty.to_dict()), 200
+    return success_response(faculty.to_dict())
 
 
 @faculty_bp.route("/<int:faculty_id>", methods=["DELETE"])
 @login_required
 @role_required("admin")
+@handle_api_exceptions
 def delete_faculty(faculty_id: int):
     """DELETE /api/faculty/<id> — Admin only.
 
@@ -160,7 +173,7 @@ def delete_faculty(faculty_id: int):
     """
     faculty = _get_faculty_or_none(faculty_id)
     if not faculty:
-        return jsonify({"error": "Faculty not found."}), 404
+        return error_response("Faculty not found.", status_code=404)
     # Delete the parent User account; SQLAlchemy cascade removes Faculty profile.
     user = faculty.user
     if user:
@@ -168,18 +181,20 @@ def delete_faculty(faculty_id: int):
     else:
         db.session.delete(faculty)  # fallback: orphaned profile with no User
     db.session.commit()
-    return jsonify({"message": "Faculty deleted."}), 200
+    return success_response(message="Faculty deleted.")
 
 
 # ─────────────────────────── sub-resource ───────────────────────────────── #
 
 @faculty_bp.route("/<int:faculty_id>/courses", methods=["GET"])
 @login_required
+@role_required("admin", "faculty")
+@handle_api_exceptions
 def get_faculty_courses(faculty_id: int):
     """GET /api/faculty/<id>/courses — Own faculty or admin."""
     faculty = _get_faculty_or_none(faculty_id)
     if not faculty:
-        return jsonify({"error": "Faculty not found."}), 404
+        return error_response("Faculty not found.", status_code=404)
     if not _idor_check_faculty(faculty):
-        return jsonify({"error": "Access forbidden."}), 403
-    return jsonify([c.to_dict() for c in faculty.courses]), 200
+        return error_response("Access forbidden.", status_code=403)
+    return success_response([c.to_dict() for c in faculty.courses])

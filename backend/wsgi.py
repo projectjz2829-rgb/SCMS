@@ -3,9 +3,7 @@ wsgi.py
 Production WSGI entry point — loaded by Gunicorn.
 
 On every startup:
-  1. db.create_all() ensures all ORM-defined tables exist in PostgreSQL.
-     It is idempotent — it never drops or alters existing tables.
-     No flask-migrate history files exist, so this is the safe bootstrap path.
+  1. flask db upgrade applies any pending Alembic migrations.
   2. An admin account is seeded if none exists yet.
 Environment variables:
   FLASK_ENV      - 'production' (default) or 'development'
@@ -13,37 +11,35 @@ Environment variables:
   ADMIN_PASSWORD - Admin login password (default: Admin@1234)
 """
 import os
+import subprocess
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
 
+from werkzeug.middleware.proxy_fix import ProxyFix
 from app import create_app
 from app.extensions import db
 
 app = create_app(os.environ.get("FLASK_ENV", "production"))
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 with app.app_context():
-    # ------------------------------------------------------------------ #
-    #  Ensure all tables exist.                                           #
-    #  db.create_all() is safe to call on every startup — it only        #
-    #  creates tables that are missing and never drops or alters          #
-    #  existing ones. Since no migration version files exist yet,         #
-    #  flask db upgrade does nothing, so this is required to             #
-    #  initialise the PostgreSQL schema on Render.                        #
-    # ------------------------------------------------------------------ #
-    try:
-        db.create_all()
-        print("[OK] Database tables verified/created")
-    except Exception as exc:
-        print(f"[WARN] db.create_all() skipped: {exc}")
+    # (Database migrations are now handled externally via start.sh before Gunicorn boots)
 
     # ------------------------------------------------------------------ #
     #  Admin seeding — idempotent, safe to run on every startup.          #
     # ------------------------------------------------------------------ #
     try:
         from app.models.user import User, RoleEnum
-        admin_email    = os.environ.get("ADMIN_EMAIL",    "admin@scms.edu")
-        admin_password = os.environ.get("ADMIN_PASSWORD", "Admin@1234")
+        admin_email = os.environ.get("ADMIN_EMAIL", "admin@scms.edu")
+        admin_password = os.environ.get("ADMIN_PASSWORD")
+        
+        if not admin_password:
+            if app.config.get("DEBUG"):
+                admin_password = "Admin@1234"
+            else:
+                raise ValueError("ADMIN_PASSWORD environment variable MUST be set in production!")
 
         if not User.query.filter_by(email=admin_email).first():
             admin = User(
@@ -54,11 +50,11 @@ with app.app_context():
             admin.set_password(admin_password)
             db.session.add(admin)
             db.session.commit()
-            print(f"[OK] Admin created: {admin_email}")
+            app.logger.info(f"[OK] Admin created: {admin_email}")
         else:
-            print(f"[OK] Admin already exists: {admin_email}")
+            app.logger.info(f"[OK] Admin already exists: {admin_email}")
     except Exception as exc:
-        print(f"[WARN] Admin seeding skipped: {exc}")
+        app.logger.warning(f"[WARN] Admin seeding skipped: {exc}")
 
 
 if __name__ == "__main__":

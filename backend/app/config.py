@@ -14,11 +14,15 @@ class Config:
     #  Core Flask settings                                                 #
     # ------------------------------------------------------------------ #
     SECRET_KEY = os.environ.get("SECRET_KEY", "fallback-dev-key-change-in-production")
+    
+    # Enforce maximum request size to prevent DoS (64 KB)
+    MAX_CONTENT_LENGTH = 64 * 1024
 
     # Render provides DATABASE_URL starting with "postgres://" (legacy scheme).
     # SQLAlchemy 2.x requires "postgresql://" — normalise at config load time.
+    _base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
     _raw_db_url = os.environ.get(
-        "DATABASE_URL", "mysql+pymysql://root:password@localhost/campus_db"
+        "DATABASE_URL", "sqlite:///" + os.path.join(_base_dir, "instance", "campus_dev.db")
     )
     if _raw_db_url.startswith("postgres://"):
         _raw_db_url = _raw_db_url.replace("postgres://", "postgresql://", 1)
@@ -54,7 +58,7 @@ class Config:
     # ------------------------------------------------------------------ #
     #  Rate limiting (Flask-Limiter)                                       #
     # ------------------------------------------------------------------ #
-    RATELIMIT_STORAGE_URI = "memory://"
+    RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
     RATELIMIT_DEFAULT = "200 per day;50 per hour"
 
 

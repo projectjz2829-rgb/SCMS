@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: scms-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
+    envVars:
+      - key: FLASK_APP
+        value: wsgi:app
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_ENV
+        value: production
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+      - key: RATELIMIT_STORAGE_URI
+        sync: false
+
+  - type: redis
+    name: scms-redis
+    plan: free
+    ipAllowList: []

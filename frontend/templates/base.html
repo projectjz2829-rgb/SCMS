@@ -7,6 +7,11 @@
 
   {# CSRF token used by all AJAX POST requests #}
   <meta name="csrf-token" content="{{ csrf_token() }}" />
+  
+  {# Prevent back-navigation to authenticated pages after logout #}
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
   <title>{% block title %}{{ title | default('SCMS') }} - Bon Secours College{% endblock %}</title>
 
@@ -46,10 +51,28 @@
 
     <div class="sidebar-user">
       <div class="user-avatar">
-        {{ current_user.email[0].upper() }}
+        {% if current_user.role.value == 'admin' %}
+          A
+        {% elif current_user.role.value == 'faculty' and current_user.faculty_profile %}
+          {{ current_user.faculty_profile.full_name[0].upper() }}
+        {% elif current_user.role.value == 'student' and current_user.student_profile %}
+          {{ current_user.student_profile.full_name[0].upper() }}
+        {% else %}
+          {{ current_user.email[0].upper() }}
+        {% endif %}
       </div>
       <div class="user-info">
-        <span class="user-email" title="{{ current_user.email }}">{{ current_user.email }}</span>
+        <span class="user-email" title="{{ current_user.email }}">
+          {% if current_user.role.value == 'admin' %}
+            Admin User
+          {% elif current_user.role.value == 'faculty' and current_user.faculty_profile %}
+            {{ current_user.faculty_profile.full_name }}
+          {% elif current_user.role.value == 'student' and current_user.student_profile %}
+            {{ current_user.student_profile.full_name }}
+          {% else %}
+            {{ current_user.email }}
+          {% endif %}
+        </span>
         <span class="badge role-badge">
           {{ current_user.role.value | capitalize }}
         </span>
@@ -121,6 +144,11 @@
         <a href="{{ url_for('dashboard.student_dashboard') }}"
            class="sidebar-link {% if request.endpoint == 'dashboard.student_dashboard' %}active{% endif %}">
           <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="#" class="sidebar-link" id="nav-my-profile" onclick="showStudentProfileModal(event)">
+          <i class="bi bi-person-badge"></i> My Profile
         </a>
       </li>
       <li>
@@ -236,6 +264,10 @@
       <a href="{{ url_for('dashboard.student_dashboard') }}" class="mobile-nav-link {% if request.endpoint == 'dashboard.student_dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i>
         <span>Home</span>
+      </a>
+      <a href="#" class="mobile-nav-link" id="mb-nav-my-profile" onclick="showStudentProfileModal(event)">
+        <i class="bi bi-person-badge"></i>
+        <span>Profile</span>
       </a>
       <a href="#" class="mobile-nav-link" id="mb-nav-my-attendance">
         <i class="bi bi-calendar-check-fill"></i>
@@ -356,6 +388,34 @@
     document.getElementById('mb-nav-marks-panel')?.addEventListener('click',      (e) => { e.preventDefault(); scrollToSection('section-marks'); });
     document.getElementById('mb-nav-my-attendance')?.addEventListener('click',    (e) => { e.preventDefault(); scrollToSection('section-my-attendance'); });
     document.getElementById('mb-nav-my-marks')?.addEventListener('click',         (e) => { e.preventDefault(); scrollToSection('section-my-marks'); });
+
+    // ── ScrollSpy for Active States ───────────────────────────────────────
+    // Highlights the sidebar link corresponding to the section currently in view.
+    const sections = document.querySelectorAll('.scms-content > .row > div[id^="section-"], .scms-content > div[id^="section-"]');
+    if (sections.length > 0) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute('id');
+            // Remove active from all sidebar links and mobile nav links
+            document.querySelectorAll('.sidebar-link, .mobile-nav-link').forEach(link => {
+              // Only remove active if it's an in-page link (has an id starting with nav- or mb-nav-)
+              if (link.id) {
+                link.classList.remove('active');
+              }
+            });
+            // Construct the corresponding nav link IDs
+            const sectionName = id.replace('section-', '');
+            const deskLink = document.getElementById(`nav-${sectionName}`);
+            const mobLink = document.getElementById(`mb-nav-${sectionName}`);
+            if (deskLink) deskLink.classList.add('active');
+            if (mobLink) mobLink.classList.add('active');
+          }
+        });
+      }, { rootMargin: '-20% 0px -60% 0px', threshold: 0 });
+
+      sections.forEach(sec => observer.observe(sec));
+    }
   </script>
 
   {% block extra_scripts %}{% endblock %}

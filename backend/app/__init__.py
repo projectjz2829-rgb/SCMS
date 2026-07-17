@@ -7,7 +7,7 @@ Follows the Flask Application Factory pattern to support multiple configs
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template
+from flask import Flask, render_template, jsonify
 
 # Load .env before any config is read
 load_dotenv()
@@ -36,7 +36,7 @@ def create_app(config_name: str = "default") -> Flask:
     app.config.from_object(config[config_name])
 
     # Enforce custom SECRET_KEY in production to prevent fallback usage
-    if config_name == "production" or app.config.get("ENV") == "production":
+    if config_name == "production":
         if app.config.get("SECRET_KEY") == "fallback-dev-key-change-in-production":
             raise ValueError("SECRET_KEY environment variable MUST be set in production mode!")
 
@@ -51,8 +51,8 @@ def create_app(config_name: str = "default") -> Flask:
     limiter.init_app(app)
 
     # ------------------------------------------------------------------ #
-    #  Import all models so SQLAlchemy mapper is complete before           #
-    #  db.create_all() is called                                           #
+    #  Import all models so SQLAlchemy mapper / Alembic metadata is       #
+    #  fully populated before blueprints are registered.                  #
     # ------------------------------------------------------------------ #
     with app.app_context():
         from app.models import (  # noqa: F401
@@ -67,6 +67,13 @@ def create_app(config_name: str = "default") -> Flask:
 
         # ------------------------------------------------------------------ #
         #  Register blueprints                                                 #
+        # ------------------------------------------------------------------ #
+        #  Health Endpoint                                                     #
+        # ------------------------------------------------------------------ #
+        @app.route("/health")
+        def health():
+            return jsonify({"status": "ok"}), 200
+
         # ------------------------------------------------------------------ #
         from app.auth import auth_bp
         app.register_blueprint(auth_bp)
@@ -97,19 +104,31 @@ def create_app(config_name: str = "default") -> Flask:
             response.headers["Content-Security-Policy"] = (
                 "frame-ancestors 'none'; "
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' "
-                "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-                "https://cdn.jsdelivr.net/npm/chart.js; "
+                "script-src 'self' 'unsafe-inline'; "
                 "style-src 'self' 'unsafe-inline' "
-                "https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+                "https://fonts.googleapis.com; "
                 "font-src 'self' https://fonts.gstatic.com; "
                 "img-src 'self' data:;"
             )
+            
+            # Enforce HSTS in production (indicated by secure cookies)
+            if app.config.get("SESSION_COOKIE_SECURE"):
+                response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
             # Disable browser APIs that this app does not use — prevents
             # accidental or malicious activation of sensors via iframe injection.
             response.headers["Permissions-Policy"] = (
                 "geolocation=(), microphone=(), camera=()"
             )
+            # Prevent the browser from caching authenticated pages.
+            # After logout the back-button must re-request the server
+            # (which will redirect to login) rather than serving stale
+            # cached content that appears authenticated.
+            from flask_login import current_user
+            if current_user.is_authenticated:
+                response.headers.setdefault(
+                    "Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"
+                )
+                response.headers.setdefault("Pragma", "no-cache")
             return response
 
         # ------------------------------------------------------------------ #
@@ -125,42 +144,45 @@ def create_app(config_name: str = "default") -> Flask:
                 or 'application/json' in flask_request.headers.get('Accept', '')
             )
 
+        from app.api.responses import error_response
+
         @app.errorhandler(400)
         def bad_request(e):
             if _wants_json():
-                return jsonify({"error": "Bad Request", "message": str(e)}), 400
+                return error_response(f"Bad Request: {str(e)}", status_code=400)
             return render_template("errors/400.html", title="Bad Request"), 400
+
+        @app.errorhandler(401)
+        def unauthorized(e):
+            if _wants_json():
+                return error_response("Unauthorized", status_code=401)
+            return render_template("errors/401.html", title="Unauthorized"), 401
 
         @app.errorhandler(403)
         def forbidden(e):
             if _wants_json():
-                return jsonify({"error": "Forbidden", "message": str(e)}), 403
+                return error_response("Forbidden", status_code=403)
             return render_template("errors/403.html", title="Access Denied"), 403
 
         @app.errorhandler(404)
         def not_found(e):
             if _wants_json():
-                return jsonify({"error": "Not Found", "message": str(e)}), 404
+                return error_response("Not Found", status_code=404)
             return render_template("errors/404.html", title="Page Not Found"), 404
 
         @app.errorhandler(429)
         def rate_limited(e):
             if _wants_json():
-                return jsonify({"error": "Too Many Requests", "message": str(e)}), 429
+                return error_response("Too Many Requests", status_code=429)
             return render_template("errors/429.html", title="Too Many Requests"), 429
 
         @app.errorhandler(500)
+        @app.errorhandler(Exception)
         def internal_error(e):
             db.session.rollback()
-            # Log the real exception for developers, but never send raw
-            # exception details (stack traces, file paths, SQL, etc.) to
-            # the client — that's an information-disclosure risk.
             app.logger.exception("Unhandled server error")
             if _wants_json():
-                return jsonify({
-                    "error": "Internal Server Error",
-                    "message": "Something went wrong on our end. Please try again later."
-                }), 500
+                return error_response("Something went wrong on our end. Please try again later.", status_code=500)
             return render_template("errors/500.html", title="Server Error"), 500
 
         # ------------------------------------------------------------------ #
@@ -175,9 +197,10 @@ def create_app(config_name: str = "default") -> Flask:
             stream_handler.setLevel(logging.WARNING)
             app.logger.addHandler(stream_handler)
             app.logger.setLevel(logging.WARNING)
-            app.logger.info("SCMS startup initialised successfully")
+            app.logger.warning("SCMS startup initialised successfully")
 
-        # Only auto-create tables in dev/test; production relies on migrations
+        # Auto-create tables in dev/test only.
+        # Production uses `flask db upgrade` via wsgi.py.
         if app.config.get("TESTING") or app.config.get("DEBUG"):
             db.create_all()
 

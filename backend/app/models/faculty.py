@@ -40,7 +40,7 @@ class Faculty(db.Model):
         back_populates="enterer",
     )
 
-    def to_dict(self) -> dict:
+    def to_dict(self, email=None) -> dict:
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -49,7 +49,7 @@ class Faculty(db.Model):
             "dept": self.dept,
             "designation": self.designation,
             "phone": self.phone,
-            "email": self.user.email if self.user else None,
+            "email": email if email is not None else (self.user.email if self.user else None),
         }
 
     def __repr__(self) -> str:

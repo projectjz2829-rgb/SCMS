@@ -5,8 +5,10 @@ POST — Faculty only: enter/update marks for a student-course-year triple.
 GET  — Student (own), faculty, admin.
 PUT  — Faculty who entered or admin.
 """
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request
 from flask_login import current_user, login_required
+
+from app.api.responses import success_response, error_response, handle_api_exceptions
 
 from app.extensions import db
 from app.models.marks import Marks
@@ -14,6 +16,7 @@ from app.models.course import Course
 from app.models.student import Student
 from app.models.user import RoleEnum
 from app.auth.decorators import role_required
+from app.api.utils import verify_faculty_course_access
 
 marks_bp = Blueprint("marks", __name__)
 
@@ -25,56 +28,48 @@ _MARK_FIELDS = ("internal_1", "internal_2", "semester_final", "practical")
 @marks_bp.route("/", methods=["POST"])
 @login_required
 @role_required("faculty", "admin")
+@handle_api_exceptions
 def enter_marks():
     """POST /api/marks/ — Faculty only."""
     data = request.get_json(silent=True) or {}
-    required = ("student_id", "course_id", "academic_year")
-    missing = [f for f in required if not data.get(f)]
-    if missing:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+    
+    from app.api.validators import validate_payload
+    schema = {
+        "student_id": {"type": int, "required": True},
+        "course_id": {"type": int, "required": True},
+        "academic_year": {"type": str, "required": True, "regex": r"^\d{4}-\d{4}$"},
+        "internal_1": {"type": int, "required": False, "min_val": 0, "max_val": 25},
+        "internal_2": {"type": int, "required": False, "min_val": 0, "max_val": 25},
+        "semester_final": {"type": int, "required": False, "min_val": 0, "max_val": 75},
+        "practical": {"type": int, "required": False, "min_val": 0, "max_val": 50}
+    }
+    cleaned_data, err_resp = validate_payload(data, schema)
+    if err_resp:
+        return err_resp
 
-    student_id = data["student_id"]
-    course_id = data["course_id"]
-    academic_year_raw = data.get("academic_year")
-    if not isinstance(academic_year_raw, str):
-        return jsonify({"error": "academic_year must be a string."}), 400
-
-    academic_year = academic_year_raw.strip()
-    import re
-    if not re.match(r"^\d{4}-\d{4}$", academic_year):
-        return jsonify({"error": "academic_year must match YYYY-YYYY format (e.g., 2024-2025)."}), 400
+    student_id = cleaned_data["student_id"]
+    course_id = cleaned_data["course_id"]
+    academic_year = cleaned_data["academic_year"]
 
     student = db.session.get(Student, student_id)
     if not student:
-        return jsonify({"error": "Student not found."}), 404
+        return error_response("Student not found.", status_code=404)
 
     course = db.session.get(Course, course_id)
     if not course:
-        return jsonify({"error": "Course not found."}), 404
+        return error_response("Course not found.", status_code=404)
 
-    if current_user.role == RoleEnum.faculty:
-        if not current_user.faculty_profile or course.faculty_id != current_user.faculty_profile.id:
-            return jsonify({"error": "You are not assigned to this course."}), 403
+    access_err = verify_faculty_course_access(course)
+    if access_err:
+        return access_err
 
     # Verify student is enrolled in the course
     from app.models.course import Enrollment
     enrolled = Enrollment.query.filter_by(student_id=student_id, course_id=course_id).first()
     if not enrolled:
-        return jsonify({"error": "Student is not enrolled in this course."}), 400
+        return error_response("Student is not enrolled in this course.", status_code=400)
 
     faculty_id = current_user.faculty_profile.id if current_user.faculty_profile else None
-
-    # ── Marks range validation ───────────────────────────────────────────── #
-    # Enforce published assessment limits so no record can exceed max marks.
-    _LIMITS = {"internal_1": 25, "internal_2": 25, "semester_final": 75, "practical": 50}
-    for field, max_val in _LIMITS.items():
-        if field in data:
-            try:
-                v = int(data[field])
-            except (ValueError, TypeError):
-                return jsonify({"error": f"{field} must be an integer."}), 400
-            if not (0 <= v <= max_val):
-                return jsonify({"error": f"{field} must be between 0 and {max_val}."}), 400
 
     existing = Marks.query.filter_by(
         student_id=student_id,
@@ -84,81 +79,125 @@ def enter_marks():
 
     if existing:
         for field in _MARK_FIELDS:
-            if field in data:
-                setattr(existing, field, int(data[field]))
+            if field in cleaned_data:
+                setattr(existing, field, cleaned_data[field])
         existing.entered_by = faculty_id
         db.session.commit()
-        return jsonify(existing.to_dict()), 200
+        return success_response(existing.to_dict())
 
     mark = Marks(
         student_id=student_id,
         course_id=course_id,
         academic_year=academic_year,
-        internal_1=int(data.get("internal_1", 0)),
-        internal_2=int(data.get("internal_2", 0)),
-        semester_final=int(data.get("semester_final", 0)),
-        practical=int(data.get("practical", 0)),
+        internal_1=cleaned_data.get("internal_1", 0),
+        internal_2=cleaned_data.get("internal_2", 0),
+        semester_final=cleaned_data.get("semester_final", 0),
+        practical=cleaned_data.get("practical", 0),
         entered_by=faculty_id,
     )
     db.session.add(mark)
     db.session.commit()
-    return jsonify(mark.to_dict()), 201
+    return success_response(mark.to_dict(), status_code=201)
 
 
 # ─────────────────────────── get by student ─────────────────────────────── #
 
 @marks_bp.route("/student/<int:student_id>", methods=["GET"])
 @login_required
+@role_required("admin", "faculty", "student")
+@handle_api_exceptions
 def get_marks_by_student(student_id: int):
-    """GET /api/marks/student/<id> — Own student or faculty/admin."""
+    """
+    [DEPRECATED] GET /api/marks/student/<id>
+    Use GET /api/students/<id>/marks instead.
+    
+    - Admin: full access.
+    - Faculty: only if the student is enrolled in one of their courses.
+      Returns only marks for that faculty's own courses.
+    - Student: own records only.
+    """
     student = db.session.get(Student, student_id)
     if not student:
-        return jsonify({"error": "Student not found."}), 404
+        return error_response("Student not found.", status_code=404)
 
+    # Student: own record only
     if current_user.role == RoleEnum.student:
         if not current_user.student_profile or current_user.student_profile.id != student_id:
-            return jsonify({"error": "Access forbidden."}), 403
+            return error_response("Access forbidden.", status_code=403)
+        records = Marks.query.filter_by(student_id=student_id).all()
+        return success_response([r.to_dict() for r in records])
 
-    records = Marks.query.filter_by(student_id=student_id).all()
-    return jsonify([r.to_dict() for r in records]), 200
+    # Admin: unrestricted
+    if current_user.role == RoleEnum.admin:
+        records = Marks.query.filter_by(student_id=student_id).all()
+        return success_response([r.to_dict() for r in records])
+
+    # Faculty: must teach this student in at least one of their courses
+    fp = current_user.faculty_profile
+    if not fp:
+        return error_response("Faculty profile not found.", status_code=403)
+
+    from app.models.course import Enrollment
+    teaches = (
+        db.session.query(Enrollment)
+        .join(Enrollment.course)
+        .filter(
+            Enrollment.student_id == student_id,
+            Enrollment.course.has(faculty_id=fp.id),
+        )
+        .first()
+    )
+    if not teaches:
+        return error_response("Access forbidden.", status_code=403)
+
+    # Return only marks for this faculty's own courses
+    own_course_ids = [c.id for c in Course.query.filter_by(faculty_id=fp.id).all()]
+    records = (
+        Marks.query
+        .filter(
+            Marks.student_id == student_id,
+            Marks.course_id.in_(own_course_ids),
+        )
+        .all()
+    )
+    return success_response([r.to_dict() for r in records])
 
 
 # ─────────────────────────── update ─────────────────────────────────────── #
 
 @marks_bp.route("/<int:mark_id>", methods=["PUT"])
 @login_required
+@role_required("admin", "faculty")
+@handle_api_exceptions
 def update_marks(mark_id: int):
     """PUT /api/marks/<id> — Faculty who entered or admin."""
     mark = db.session.get(Marks, mark_id)
     if not mark:
-        return jsonify({"error": "Marks record not found."}), 404
-
-    if current_user.role == RoleEnum.student:
-        return jsonify({"error": "Access forbidden."}), 403
+        return error_response("Marks record not found.", status_code=404)
 
     if current_user.role == RoleEnum.faculty:
         if not current_user.faculty_profile or mark.entered_by != current_user.faculty_profile.id:
-            return jsonify({"error": "You did not enter these marks."}), 403
+            return error_response("You did not enter these marks.", status_code=403)
 
     data = request.get_json(silent=True) or {}
 
-    # ── Marks range validation ───────────────────────────────────────────── #
-    _LIMITS = {"internal_1": 25, "internal_2": 25, "semester_final": 75, "practical": 50}
-    for field, max_val in _LIMITS.items():
-        if field in data:
-            try:
-                v = int(data[field])
-            except (ValueError, TypeError):
-                return jsonify({"error": f"{field} must be an integer."}), 400
-            if not (0 <= v <= max_val):
-                return jsonify({"error": f"{field} must be between 0 and {max_val}."}), 400
+    from app.api.validators import validate_payload
+    schema = {
+        "internal_1": {"type": int, "required": False, "min_val": 0, "max_val": 25},
+        "internal_2": {"type": int, "required": False, "min_val": 0, "max_val": 25},
+        "semester_final": {"type": int, "required": False, "min_val": 0, "max_val": 75},
+        "practical": {"type": int, "required": False, "min_val": 0, "max_val": 50}
+    }
+    cleaned_data, err_resp = validate_payload(data, schema)
+    if err_resp:
+        return err_resp
 
     for field in _MARK_FIELDS:
-        if field in data:
-            setattr(mark, field, int(data[field]))
+        if field in cleaned_data and cleaned_data[field] is not None:
+            setattr(mark, field, cleaned_data[field])
 
     db.session.commit()
-    return jsonify(mark.to_dict()), 200
+    return success_response(mark.to_dict())
 
 
 # ─────────────────────────── get by course ──────────────────────────────── #
@@ -166,15 +205,16 @@ def update_marks(mark_id: int):
 @marks_bp.route("/course/<int:course_id>", methods=["GET"])
 @login_required
 @role_required("faculty", "admin")
+@handle_api_exceptions
 def get_marks_by_course(course_id: int):
     """GET /api/marks/course/<id> — Faculty of that course or admin."""
     course = db.session.get(Course, course_id)
     if not course:
-        return jsonify({"error": "Course not found."}), 404
+        return error_response("Course not found.", status_code=404)
 
-    if current_user.role == RoleEnum.faculty:
-        if not current_user.faculty_profile or course.faculty_id != current_user.faculty_profile.id:
-            return jsonify({"error": "Access forbidden."}), 403
+    access_err = verify_faculty_course_access(course)
+    if access_err:
+        return access_err
 
     records = Marks.query.filter_by(course_id=course_id).all()
-    return jsonify([r.to_dict() for r in records]), 200
+    return success_response([r.to_dict() for r in records])

@@ -39,7 +39,7 @@ class Student(db.Model):
         "Marks", back_populates="student", cascade="all, delete-orphan"
     )
 
-    def to_dict(self) -> dict:
+    def to_dict(self, email=None) -> dict:
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -49,7 +49,7 @@ class Student(db.Model):
             "year": self.year,
             "section": self.section,
             "phone": self.phone,
-            "email": self.user.email if self.user else None,
+            "email": email if email is not None else (self.user.email if self.user else None),
         }
 
     def __repr__(self) -> str:

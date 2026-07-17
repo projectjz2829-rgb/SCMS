@@ -114,8 +114,6 @@ SCMS-main/
 │           ├── 403.html
 │           ├── 404.html
 │           └── 429.html
-├── requirements.txt
-├── render.yaml                  # Render deployment config
 └── .gitignore
 ```
 
@@ -147,7 +145,7 @@ source .venv/bin/activate
 
 ### 3. Install dependencies
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ### 4. Set environment variables
@@ -191,21 +189,16 @@ The app will be available at **http://127.0.0.1:5000**
 
 This project is configured for one-click deployment on [Render](https://render.com).
 
+> 💡 This project includes a `render.yaml` Blueprint. When connecting your repository to Render, the web service configuration (build commands, start commands, root directory, and Python runtime) will be automatically provisioned for you.
+
 ### Steps:
 1. Push this repository to GitHub.
-2. Create a new **Web Service** on Render, pointing to the repo.
-3. Set the **Build Command**: `pip install -r requirements.txt`
-4. Set the **Start Command**: `gunicorn wsgi:app --workers 2 --threads 2 --bind 0.0.0.0:$PORT --log-level warning --access-logfile -`
-5. Set the **Root Directory**: `backend`
-6. Add a **PostgreSQL** database add-on on Render. The `DATABASE_URL` is injected automatically.
-7. Add the following environment variables in the Render dashboard:
-   - `SECRET_KEY` — generate with `python -c "import secrets; print(secrets.token_hex(32))"`
-   - `FLASK_ENV` = `production`
-   - `SESSION_COOKIE_SECURE` = `true`
-   - `ADMIN_EMAIL` — your desired admin email
-   - `ADMIN_PASSWORD` — your desired admin password
+2. In your Render Dashboard, click **New +** and select **Blueprint**.
+3. Connect your repository. Render will automatically read the `render.yaml` file.
+4. Add a **PostgreSQL** database add-on on Render (the `DATABASE_URL` is injected automatically).
+5. Provide values for the required environment variables (`SECRET_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`) when prompted by the Blueprint deploy flow.
 
-> ⚠️ On every deploy, `db.create_all()` is called at startup — it is idempotent and safe (never drops existing tables). No migration files needed.
+> ⚠️ On every deploy, `flask db upgrade` is called at startup via `start.sh` to safely apply any schema changes before the server boots.
 
 ---
 

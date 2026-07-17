@@ -68,15 +68,16 @@ class Course(db.Model):
         "Marks", back_populates="course", cascade="all, delete-orphan"
     )
 
-    def to_dict(self) -> dict:
+    def to_dict(self, faculty_name=None, enrolled_count=None) -> dict:
         return {
             "id": self.id,
             "name": self.name,
             "code": self.code,
             "faculty_id": self.faculty_id,
-            "faculty_name": self.faculty.full_name if self.faculty else None,
+            "faculty_name": faculty_name if faculty_name is not None else (self.faculty.full_name if self.faculty else None),
             "dept": self.dept,
             "semester": self.semester,
+            "enrolled_count": enrolled_count if enrolled_count is not None else len(self.enrollments),
         }
 
     def __repr__(self) -> str:

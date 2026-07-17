@@ -36,15 +36,89 @@
     </div>
   </div>
 
+  <div class="row g-4 mb-4" id="student-stat-cards">
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-courses p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-book-fill fs-4"></i></div>
+          <span class="badge role-badge">Courses</span>
+        </div>
+        <p class="stat-number" id="stu-stat-courses">-</p>
+        <span class="stat-label">Enrolled Courses</span>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-attendance p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-calendar-check-fill fs-4"></i></div>
+          <span class="badge role-badge">Attendance</span>
+        </div>
+        <p class="stat-number" id="stu-stat-att">-</p>
+        <span class="stat-label">Overall Avg. Attendance</span>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-faculty p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-journal-text fs-4"></i></div>
+          <span class="badge role-badge">Assignments</span>
+        </div>
+        <p class="stat-number" id="stu-stat-pending">-</p>
+        <span class="stat-label">Pending Assignments/Marks</span>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card scms-stat-card stat-theme-students p-3">
+        <div class="stat-header">
+          <div class="stat-icon-wrapper"><i class="bi bi-award-fill fs-4"></i></div>
+          <span class="badge role-badge">GPA</span>
+        </div>
+        <p class="stat-number" id="stu-stat-gpa">-</p>
+        <span class="stat-label">Calculated GPA Summary</span>
+      </div>
+    </div>
+  </div>
+
   <div class="row g-4">
 
-    {# ── Attendance summary ── #}
+    {# ── Left column: My courses + chart ── #}
+    <div class="col-12 col-xl-4" id="section-my-courses">
+      <div class="card p-4 mb-4">
+        <h5 class="card-title mb-3">
+          <i class="bi bi-book-fill text-primary-scms me-1"></i>Enrolled Courses
+        </h5>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+          <div id="enrolledCoursesList" class="d-flex flex-column gap-2">
+            <div class="skeleton-item">Loading courses…</div>
+          </div>
+        </div>
+      </div>
+      
+      {# Attendance chart #}
+      <div class="card p-4 mb-4">
+        <h5 class="card-title mb-3">
+          <i class="bi bi-bar-chart-fill text-primary-scms me-1"></i>Attendance Curve by Subject
+        </h5>
+        <div class="chart-container" style="position: relative; height:200px; width:100%;">
+          <canvas id="studentAttChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    {# ── Center/Right column: Attendance summary + Marks ── #}
+    <div class="col-12 col-xl-8">
+      <div class="row g-4">    {# ── Attendance summary ── #}
     <div class="col-12 col-lg-7" id="section-my-attendance">
       <div class="card p-4 mb-4">
         <h5 class="card-title mb-1">
           <i class="bi bi-calendar-check-fill text-success me-1"></i>Attendance Analytics
         </h5>
-        <p class="text-xs text-muted mb-4">Detailed subject attendance report and cumulative percentage</p>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <p class="text-xs text-muted mb-0">Detailed subject attendance report and cumulative percentage</p>
+          <button class="btn scms-btn-outline btn-sm" onclick="showAttendanceModal()">
+            <i class="bi bi-clock-history"></i> View Full History
+          </button>
+        </div>
 
         {# SVG Circular Attendance Ring #}
         <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
@@ -69,15 +143,6 @@
         </div>
       </div>
 
-      {# Attendance chart #}
-      <div class="card p-4">
-        <h5 class="card-title mb-3">
-          <i class="bi bi-bar-chart-fill text-primary-scms me-1"></i>Attendance Curve by Subject
-        </h5>
-        <div class="chart-container" style="position: relative; height:200px; width:100%;">
-          <canvas id="studentAttChart" height="200"></canvas>
-        </div>
-      </div>
     </div>
 
     {# ── Marks + Bulletin ── #}
@@ -86,7 +151,7 @@
         <h5 class="card-title mb-3">
           <i class="bi bi-clipboard2-data-fill text-accent me-1"></i>Academic Performance (Marks)
         </h5>
-        <div class="table-responsive-card mt-2">
+        <div class="table-responsive mt-2">
           <table class="table scms-table" id="marksTable">
             <thead>
               <tr>
@@ -95,10 +160,13 @@
                 <th class="text-center">IA 2</th>
                 <th class="text-center">Sem</th>
                 <th class="text-center">Prac</th>
+                <th class="text-center fw-bold">Total</th>
+                <th class="text-center">Grade</th>
+                <th class="text-center">Points</th>
               </tr>
             </thead>
             <tbody id="marksBody">
-              <tr><td colspan="5" class="text-center text-muted py-3">Retrieving marks ledger…</td></tr>
+              <tr><td colspan="8" class="text-center text-muted py-3">Retrieving marks ledger…</td></tr>
             </tbody>
           </table>
         </div>
@@ -114,6 +182,161 @@
       </div>
     </div>
   </div>
+  </div>
+
+  {# ── Course Details Modal ── #}
+  <div class="modal fade" id="courseDetailsModal" tabindex="-1" aria-labelledby="courseDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content scms-modal">
+        <div class="modal-header pb-0 border-0">
+          <h5 class="modal-title" id="courseDetailsModalLabel" style="font-family: var(--font-display); font-weight: 700;">
+            <i class="bi bi-book-fill text-primary-scms me-2"></i>Course Details
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="p-3 mb-3 rounded" style="background: var(--color-bg-sunken);">
+            <div class="row gy-2">
+              <div class="col-6">
+                <small class="text-muted d-block text-xs fw-bold text-uppercase mb-1">Course Code</small>
+                <span id="cd-code" class="fw-medium text-dark">-</span>
+              </div>
+              <div class="col-6">
+                <small class="text-muted d-block text-xs fw-bold text-uppercase mb-1">Course Name</small>
+                <span id="cd-name" class="fw-medium text-dark">-</span>
+              </div>
+              <div class="col-6">
+                <small class="text-muted d-block text-xs fw-bold text-uppercase mb-1">Department</small>
+                <span id="cd-dept" class="fw-medium text-dark">-</span>
+              </div>
+              <div class="col-6">
+                <small class="text-muted d-block text-xs fw-bold text-uppercase mb-1">Semester</small>
+                <span id="cd-sem" class="fw-medium text-dark">-</span>
+              </div>
+              <div class="col-12 border-top pt-2 mt-2 border-light">
+                <small class="text-muted d-block text-xs fw-bold text-uppercase mb-1">Course Instructor (Faculty)</small>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.9rem;" id="cd-fac-initial">F</div>
+                  <span id="cd-faculty" class="fw-medium text-dark">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn scms-btn-outline w-100" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Attendance History Modal ── #}
+  <div class="modal fade" id="attendanceHistoryModal" tabindex="-1" aria-labelledby="attendanceHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content scms-modal">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title" id="attendanceHistoryModalLabel" style="font-family: var(--font-display); font-weight: 700;">
+            <i class="bi bi-clock-history text-primary-scms me-2"></i>Session Attendance History
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <input type="text" id="attSearchInput" class="form-control scms-input flex-grow-1" placeholder="Search by course code or name..." style="max-width: 300px;">
+            <select id="attStatusFilter" class="form-select scms-input w-auto">
+              <option value="all">All Statuses</option>
+              <option value="present">Present</option>
+              <option value="late">Late</option>
+              <option value="absent">Absent</option>
+            </select>
+          </div>
+          <div class="table-responsive">
+            <table class="table scms-table mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Course Code</th>
+                  <th>Course Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="attHistoryBody">
+                <tr><td colspan="4" class="text-center text-muted py-3">Loading history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <span class="text-xs text-muted" id="attHistoryCount">Showing 0 records</span>
+            <div class="btn-group">
+              <button class="btn scms-btn-outline btn-sm" id="attPrevBtn">Previous</button>
+              <button class="btn scms-btn-outline btn-sm" id="attNextBtn">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Student Profile Modal ── #}
+  <div class="modal fade" id="studentProfileModal" tabindex="-1" aria-labelledby="studentProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content scms-modal">
+        <form id="studentProfileForm" onsubmit="updateStudentProfile(event)">
+          <div class="modal-header pb-0 border-0">
+            <h5 class="modal-title" id="studentProfileModalLabel" style="font-family: var(--font-display); font-weight: 700;">
+              <i class="bi bi-person-badge text-primary-scms me-2"></i>My Profile
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="prof-id" name="student_id">
+            <div class="row g-3">
+              <div class="col-12 text-center mb-2">
+                <div class="user-avatar mx-auto mb-2" style="width: 64px; height: 64px; font-size: 1.5rem;" id="prof-initial">S</div>
+                <h6 class="mb-0 fw-bold" id="prof-name-display">-</h6>
+                <small class="text-muted" id="prof-email-display">-</small>
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label text-xs fw-bold text-muted text-uppercase mb-1">Full Name</label>
+                <input type="text" class="form-control scms-input bg-light" id="prof-name" disabled>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-xs fw-bold text-muted text-uppercase mb-1">Register Number</label>
+                <input type="text" class="form-control scms-input bg-light" id="prof-roll" disabled>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-xs fw-bold text-muted text-uppercase mb-1">Dept</label>
+                <input type="text" class="form-control scms-input bg-light" id="prof-dept" disabled>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-xs fw-bold text-muted text-uppercase mb-1">Year</label>
+                <input type="text" class="form-control scms-input bg-light" id="prof-year" disabled>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-xs fw-bold text-muted text-uppercase mb-1">Section</label>
+                <input type="text" class="form-control scms-input bg-light" id="prof-sec" disabled>
+              </div>
+              
+              <div class="col-12 mt-4 pt-3 border-top">
+                <h6 class="fw-bold mb-3" style="font-family: var(--font-display);">Contact Information</h6>
+                <label class="form-label text-xs fw-bold text-muted text-uppercase mb-1">Phone Number (Editable)</label>
+                <input type="tel" class="form-control scms-input" id="prof-phone" name="phone" placeholder="e.g. +1 234 567 8900" pattern="[\+0-9\-\s]{7,20}" maxlength="20">
+                <small class="form-text text-muted">You may update your contact number. Other fields require administrative approval to change.</small>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn scms-btn-outline" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn scms-btn-primary">
+              <i class="bi bi-check2-circle"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
