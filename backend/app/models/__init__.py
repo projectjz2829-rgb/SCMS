@@ -9,6 +9,8 @@ from app.models.faculty import Faculty
 from app.models.course import Course, Enrollment
 from app.models.attendance import Attendance, AttendanceStatusEnum
 from app.models.marks import Marks
+from app.models.announcement import Announcement, PriorityEnum
+from app.models.activity import ActivityLog
 
 __all__ = [
     "User",
@@ -20,4 +22,7 @@ __all__ = [
     "Attendance",
     "AttendanceStatusEnum",
     "Marks",
+    "Announcement",
+    "PriorityEnum",
+    "ActivityLog",
 ]

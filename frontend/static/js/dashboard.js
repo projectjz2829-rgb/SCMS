@@ -835,7 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enrolling...';
     try {
-      await apiRequest('POST', `/api/courses/${cid}/enroll`, { student_id: parseInt(sidRaw) });
+      await apiRequest('POST', `/api/courses/${cid}/enroll`, { student_id: sidRaw });
       msgEl.innerHTML = '<div class="alert alert-success py-2">Student enrolled successfully!</div>';
       document.getElementById('enrollStudentId').value = '';
       loadCourseTable();

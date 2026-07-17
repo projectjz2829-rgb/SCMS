@@ -242,14 +242,23 @@ def enroll_student(course_id: int):
         return error_response("Course not found.", status_code=404)
 
     data = request.get_json(silent=True) or {}
-    student_id = data.get("student_id")
-    if not student_id:
-        return error_response("student_id is required.", status_code=400)
+    student_identifier = data.get("student_id")
+    if not student_identifier:
+        return error_response("Student Roll Number is required.", status_code=400)
 
-    student = db.session.get(Student, student_id)
+    # Allow lookup by roll_no first (since admin UI now sends roll_no)
+    student = Student.query.filter_by(roll_no=str(student_identifier)).first()
+    if not student:
+        # Fallback to internal ID for backward API compatibility
+        try:
+            student = db.session.get(Student, int(student_identifier))
+        except (ValueError, TypeError):
+            pass
+
     if not student:
         return error_response("Student not found.", status_code=404)
-
+        
+    student_id = student.id
     # ── Department match validation ────────────────────────────────────── #
     # Students must belong to the same department as the course so that
     # faculty attendance grids and marks ledgers remain cohesive.
