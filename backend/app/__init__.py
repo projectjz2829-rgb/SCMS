@@ -63,6 +63,8 @@ def create_app(config_name: str = "default") -> Flask:
             Enrollment,
             Attendance,
             Marks,
+            Announcement,
+            ActivityLog,
         )
 
         # ------------------------------------------------------------------ #
