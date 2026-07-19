@@ -68,7 +68,7 @@ def create_announcement():
     db.session.add(ann)
     _log_activity("Announcement Created", f"Created announcement: {title}")
     db.session.commit()
-    return success_response(ann.to_dict(), 201)
+    return success_response(ann.to_dict(), status_code=201)
 
 @announcements_bp.route("/<int:ann_id>", methods=["PUT"])
 @login_required
@@ -85,6 +85,17 @@ def update_announcement(ann_id: int):
     if "priority" in data: ann.priority = PriorityEnum(data["priority"])
     if "pinned" in data: ann.pinned = bool(data["pinned"])
     if "active" in data: ann.active = bool(data["active"])
+    if "expiry_date" in data:
+        if data["expiry_date"]:
+            try:
+                dt = datetime.fromisoformat(data["expiry_date"])
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                ann.expiry_date = dt
+            except ValueError:
+                pass
+        else:
+            ann.expiry_date = None
     
     _log_activity("Announcement Edited", f"Updated announcement: {ann.title}")
     db.session.commit()
