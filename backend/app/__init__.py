@@ -87,13 +87,25 @@ def create_app(config_name: str = "default") -> Flask:
         app.register_blueprint(dashboard_bp)
 
         # ------------------------------------------------------------------ #
-        #  Root redirect                                                       #
+        #  SPA Catch-all                                                       #
         # ------------------------------------------------------------------ #
-        from flask import redirect, url_for
+        from flask import send_from_directory, make_response
+        import os
+        from flask_wtf.csrf import generate_csrf
 
-        @app.route("/")
-        def root():
-            return redirect(url_for("auth.login"))
+        @app.route("/", defaults={"path": ""})
+        @app.route("/<path:path>")
+        def serve_spa(path):
+            if path.startswith("api/") or path.startswith("auth/"):
+                return jsonify({"error": "Not found"}), 404
+                
+            dist_dir = os.path.join(app.root_path, "static", "dist")
+            if path != "" and os.path.exists(os.path.join(dist_dir, path)):
+                return send_from_directory(dist_dir, path)
+                
+            response = make_response(send_from_directory(dist_dir, "index.html"))
+            response.set_cookie("csrf_token", generate_csrf(), httponly=False, samesite="Lax")
+            return response
 
         # ------------------------------------------------------------------ #
         #  Security headers — applied to every response                        #

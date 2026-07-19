@@ -58,10 +58,10 @@
 | **ORM** | SQLAlchemy 2.x, Flask-SQLAlchemy |
 | **Database** | PostgreSQL (production) / SQLite (testing) |
 | **Auth** | Flask-Login + Bcrypt password hashing |
-| **Security** | CSRF (Flask-WTF), Rate limiting, CSP headers, XSS-safe DOM APIs |
-| **Frontend** | HTML5, Vanilla CSS (custom design system), Vanilla JS (ES2020) |
-| **Charts** | Chart.js (local bundle, no CDN dependency) |
-| **UI Icons** | Bootstrap Icons |
+| **Security** | CSRF (Flask-WTF), Rate limiting, CSP headers, XSS-safe via React JSX |
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, Lucide React |
+| **Charts** | Recharts (React component library) |
+| **UI Icons** | Lucide React |
 | **WSGI** | Gunicorn (production), Flask dev server (development) |
 | **Hosting** | Render (Free Plan), PostgreSQL Add-on |
 
@@ -73,49 +73,27 @@
 SCMS-main/
 ├── backend/
 │   ├── app/
-│   │   ├── __init__.py          # Application factory (create_app)
+│   │   ├── __init__.py          # Application factory
 │   │   ├── config.py            # Dev / Test / Production configs
-│   │   ├── extensions.py        # db, bcrypt, login_manager, csrf, limiter
-│   │   ├── models/              # SQLAlchemy ORM models
-│   │   │   ├── user.py          # User (all roles share this table)
-│   │   │   ├── student.py
-│   │   │   ├── faculty.py
-│   │   │   ├── course.py        # Course + Enrollment
-│   │   │   ├── attendance.py
-│   │   │   └── marks.py
-│   │   ├── auth/                # Login / Register / Logout routes + forms
-│   │   ├── api/                 # REST endpoints (JSON)
-│   │   │   ├── students.py
-│   │   │   ├── faculty.py
-│   │   │   ├── courses.py
-│   │   │   ├── attendance.py
-│   │   │   └── marks.py
-│   │   └── dashboard/           # Page routes (Jinja2 templates)
-│   └── wsgi.py                  # Gunicorn entry-point; runs db.create_all()
+│   │   ├── extensions.py        # Extensions (db, bcrypt, login)
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── auth/                # Auth logic and session checks
+│   │   ├── api/                 # REST JSON endpoints
+│   │   └── static/dist/         # (Generated) React frontend build output
+│   └── wsgi.py                  # Entry-point
 ├── frontend/
-│   ├── static/
-│   │   ├── css/
-│   │   │   ├── campus.css       # Custom design system (tokens, components)
-│   │   │   ├── bootstrap.min.css
-│   │   │   └── bootstrap-icons.css
-│   │   └── js/
-│   │       ├── api.js           # Fetch wrapper, CSRF, toast, escapeHtml
-│   │       ├── dashboard.js     # Admin/Faculty/Student dashboard logic
-│   │       ├── attendance.js    # Faculty attendance & marks panel
-│   │       └── chart.umd.min.js # Chart.js local bundle
-│   └── templates/
-│       ├── base.html            # Sidebar, topbar, mobile nav, flash messages
-│       ├── auth/
-│       │   ├── login.html
-│       │   └── register.html
-│       ├── dashboard/
-│       │   ├── admin.html
-│       │   ├── faculty.html
-│       │   └── student.html
-│       └── errors/
-│           ├── 403.html
-│           ├── 404.html
-│           └── 429.html
+│   ├── public/                  # Static assets (images, fonts)
+│   ├── src/
+│   │   ├── api/                 # Axios API clients for backend routes
+│   │   ├── components/          # React components (Dashboard, Login, Forms)
+│   │   ├── contexts/            # React contexts (AuthContext, ToastContext)
+│   │   ├── data/                # Data types and structures
+│   │   ├── hooks/               # Custom React hooks (useDebounce, useFocusTrap)
+│   │   ├── App.tsx              # Main application router component
+│   │   └── main.tsx             # React DOM entry
+│   ├── package.json             # NPM dependencies
+│   ├── tailwind.config.js       # Tailwind theme and utilities
+│   └── vite.config.ts           # Vite build configuration (outputs to backend)
 └── .gitignore
 ```
 
@@ -210,7 +188,7 @@ On first startup, a default admin account is created:
 
 | Field | Default Value |
 |-------|---------------|
-| Email | `admin@scms.edu` (or value of `ADMIN_EMAIL` env var) |
+| Required ID | `admin@scms.edu` (or value of `ADMIN_EMAIL` env var) |
 | Password | `Admin@1234` (or value of `ADMIN_PASSWORD` env var) |
 
 > ⚠️ **Change the default password immediately after first login.** Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as environment variables on Render to override the defaults.
@@ -292,7 +270,7 @@ All API endpoints are protected by `@login_required`. Admin-only routes addition
 | **Password hashing** | Bcrypt (cost factor 12) |
 | **CSRF protection** | Flask-WTF on all forms; `X-CSRFToken` header on all AJAX requests |
 | **Rate limiting** | 5 login attempts/minute via Flask-Limiter |
-| **XSS prevention** | All dynamic DOM injection uses `textContent` or `escapeHtml()` |
+| **XSS prevention** | Default React JSX string escaping prevents XSS payloads |
 | **IDOR prevention** | All API endpoints validate the requesting user's role before responding |
 | **Security headers** | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `CSP`, `Referrer-Policy`, `Permissions-Policy` |
 | **Session security** | `HttpOnly`, `SameSite=Lax`, `Secure=True` in production |

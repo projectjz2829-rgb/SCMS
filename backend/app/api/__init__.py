@@ -5,6 +5,7 @@ API blueprint package — registers all sub-blueprints under /api.
 """
 from flask import Blueprint
 
+from .auth import auth_api_bp
 from .students import students_bp
 from .faculty import faculty_bp
 from .courses import courses_bp
@@ -13,8 +14,12 @@ from .marks import marks_bp
 from .announcements import announcements_bp
 from .activities import activities_bp
 
+from .dashboard import dashboard_api_bp
+
 def register_api_blueprints(app):
     """Register every API sub-blueprint onto the app."""
+    app.register_blueprint(auth_api_bp, url_prefix="/api/auth")
+    app.register_blueprint(dashboard_api_bp, url_prefix="/api/dashboard")
     app.register_blueprint(students_bp, url_prefix="/api/students")
     app.register_blueprint(faculty_bp, url_prefix="/api/faculty")
     app.register_blueprint(courses_bp, url_prefix="/api/courses")

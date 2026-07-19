@@ -1,3 +1,4 @@
+
 """
 app/auth/routes.py
 Authentication routes: login, logout, register (admin-only).
@@ -17,10 +18,11 @@ from flask import (
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
 
-from app.extensions import db, limiter
+from app.extensions import db, limiter, csrf
 from app.models.user import RoleEnum, User
 from app.models.student import Student
 from app.models.faculty import Faculty
+from app.api.responses import success_response, error_response
 
 from .decorators import role_required
 from .forms import LoginForm, RegisterForm
@@ -77,12 +79,25 @@ def login():
     was wrong, so the response does not reveal which identifier exists.
     """
     if current_user.is_authenticated:
+        if request.is_json:
+            return success_response({"role": current_user.role.value}, message="Already authenticated")
         return _redirect_by_role(current_user)
 
-    form = LoginForm()
-    if form.validate_on_submit():
-        ident = form.identifier.data.strip()
+    ident = None
+    password = None
+    form = None
 
+    if request.is_json:
+        data = request.get_json()
+        ident = data.get("identifier", "").strip()
+        password = data.get("password", "")
+    else:
+        form = LoginForm()
+        if form.validate_on_submit():
+            ident = form.identifier.data.strip()
+            password = form.password.data
+
+    if ident and password:
         # 1. Try matching by email (case-insensitive)
         user = User.query.filter_by(email=ident.lower()).first()
 
@@ -103,10 +118,10 @@ def login():
         from app.extensions import bcrypt
         if not user:
             # $2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Lew.6K3Ew.vjG/QW2 is a valid bcrypt hash
-            bcrypt.check_password_hash("$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Lew.6K3Ew.vjG/QW2", form.password.data)
+            bcrypt.check_password_hash("$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Lew.6K3Ew.vjG/QW2", password)
 
         # Authenticate — do not reveal which field was wrong
-        if user and user.is_active and user.check_password(form.password.data):
+        if user and user.is_active and user.check_password(password):
             # Prevent session fixation by clearing existing session data before authenticating
             session.clear()
             
@@ -121,6 +136,9 @@ def login():
             session["login_time"] = now
             session["last_active"] = now
 
+            if request.is_json:
+                return success_response({"role": user.role.value}, message="Login successful")
+
             # Safe redirect — only allow same-origin relative paths (no netloc / scheme).
             next_page = request.args.get("next", "")
             parsed = urlparse(next_page)
@@ -128,8 +146,13 @@ def login():
                 return redirect(next_page)
             return _redirect_by_role(user)
 
+        if request.is_json:
+            return error_response("Invalid credentials. Please try again.", status_code=401)
         flash("Invalid credentials. Please try again.", "danger")
 
+    if request.is_json:
+        return error_response("Identifier and password are required.", status_code=400)
+        
     return render_template("auth/login.html", form=form, title="Sign In")
 
 
@@ -148,6 +171,10 @@ def logout():
     """
     logout_user()
     session.clear()
+    
+    if request.is_json:
+        return success_response(None, message="You have been signed out successfully.")
+
     flash("You have been signed out successfully.", "info")
     response = redirect(url_for("auth.login"))
     # Prevent the browser from caching the redirect or any in-flight page

@@ -1,0 +1,1 @@
+import{g as e,i as t,p as n}from"./index-D7S4Q61n.js";var r=t(`plus`,[[`path`,{d:`M5 12h14`,key:`1ays0h`}],[`path`,{d:`M12 5v14`,key:`s699le`}]]),i=e(n(),1);function a(e,t){let[n,r]=(0,i.useState)(e);return(0,i.useEffect)(()=>{let n=setTimeout(()=>{r(e)},t);return()=>{clearTimeout(n)}},[e,t]),n}export{r as n,a as t};

@@ -34,6 +34,7 @@ class Announcement(db.Model):
             "active": self.active,
             "expiry_date": self.expiry_date.isoformat() if self.expiry_date else None,
             "created_by": self.created_by,
+            "creator_name": self.creator.full_name if self.creator else "Unknown",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

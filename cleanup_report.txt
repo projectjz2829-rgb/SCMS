@@ -1,0 +1,49 @@
+--- Cleanup Report ---
+Total Files/Folders Deleted: 45
+Total Space Saved: 0.26 MB
+
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\activities.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\announcements.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\attendance.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\auth.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\courses.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\dashboard.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\faculty.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\marks.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\responses.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\students.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\utils.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\api\__pycache__\__init__.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\auth\__pycache__\decorators.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\auth\__pycache__\forms.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\auth\__pycache__\routes.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\auth\__pycache__\__init__.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\dashboard\__pycache__\routes.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\dashboard\__pycache__\__init__.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\activity.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\announcement.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\attendance.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\course.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\faculty.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\marks.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\student.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\user.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\models\__pycache__\__init__.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\__pycache__\config.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\__pycache__\extensions.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\app\__pycache__\__init__.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\migrations\versions\__pycache__\430515703e55_add_broadcast_models.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\migrations\versions\__pycache__\e2495bd7b9ab_initial_schema.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\migrations\__pycache__\env.cpython-313.pyc
+Deleted Dir: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\migrations\__pycache__
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\backend\__pycache__\wsgi.cpython-313.pyc
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\append_js.py
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\bad
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\check_imports.py
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\deploy_check.bat
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\download_assets.py
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\figma-export.zip
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\powershell.bat
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\push_fixes.bat
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\setup.bat
+Deleted File: c:\Users\moham\OneDrive\Desktop\project\SCMS\SCMS-main\test_db.py
