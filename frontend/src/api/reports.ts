@@ -1,4 +1,4 @@
-import { api } from './config'
+import api from './index'
 
 export interface TranscriptData {
   student: {
