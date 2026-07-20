@@ -3,10 +3,11 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard, Users, UserCheck, BookOpen, Megaphone, Activity,
   Settings, LogOut, GraduationCap, Bell, Search, ChevronDown,
-  Menu, X, ClipboardList, BarChart3, User, BookMarked
+  Menu, X, ClipboardList, BarChart3, User, BookMarked, FileSpreadsheet
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { announcementsApi, Announcement } from '../api/announcements'
+import { Announcement } from '../api/announcements'
+import { notificationsApi } from '../api/notifications'
 
 interface NavItem {
   id: string
@@ -21,6 +22,7 @@ const adminNav: NavItem[] = [
   { id: 'faculty', path: '/faculty', label: 'Faculty', icon: <UserCheck className="w-4 h-4" /> },
   { id: 'courses', path: '/courses', label: 'Courses', icon: <BookOpen className="w-4 h-4" /> },
   { id: 'announcements', path: '/announcements', label: 'Announcements', icon: <Megaphone className="w-4 h-4" /> },
+  { id: 'reports', path: '/reports', label: 'Reports', icon: <FileSpreadsheet className="w-4 h-4" /> },
   { id: 'activity', path: '/activity', label: 'Activity', icon: <Activity className="w-4 h-4" /> },
   { id: 'settings', path: '/settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
 ]
@@ -31,6 +33,7 @@ const facultyNav: NavItem[] = [
   { id: 'attendance', path: '/attendance', label: 'Attendance', icon: <ClipboardList className="w-4 h-4" /> },
   { id: 'marks', path: '/marks', label: 'Marks', icon: <BarChart3 className="w-4 h-4" /> },
   { id: 'announcements', path: '/announcements', label: 'Announcements', icon: <Megaphone className="w-4 h-4" /> },
+  { id: 'reports', path: '/reports', label: 'Reports', icon: <FileSpreadsheet className="w-4 h-4" /> },
   { id: 'profile', path: '/profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
   { id: 'settings', path: '/settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
 ]
@@ -63,10 +66,27 @@ export default function Layout() {
   const [notificationsList, setNotificationsList] = useState<Announcement[]>([])
 
   React.useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (role && user) {
-      announcementsApi.getAll().then(setNotificationsList).catch(console.error)
+      const fetchNotifications = () => {
+        notificationsApi.getUnread().then(setNotificationsList).catch(console.error)
+      }
+      fetchNotifications()
+      interval = setInterval(fetchNotifications, 30000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
     }
   }, [role, user])
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationsApi.markAllRead()
+      setNotificationsList([])
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   if (!role || !user) return null
 
@@ -197,21 +217,34 @@ export default function Layout() {
                   <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50">
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                       <p className="font-semibold text-slate-900">Notifications</p>
-                      <button className="text-xs text-blue-600 font-medium hover:text-blue-700">Mark all read</button>
+                      <button type="button" onClick={handleMarkAllRead} className="text-xs text-blue-600 font-medium hover:text-blue-700">Mark all read</button>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notificationsList.length === 0 && (
                         <div className="p-4 text-center text-sm text-slate-500">No notifications</div>
                       )}
                       {notificationsList.map(n => (
-                        <div key={n.id} className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-3">
+                        <button 
+                          key={n.id}
+                          onClick={async () => {
+                            try {
+                              await notificationsApi.markRead(n.id)
+                              setNotificationsList(prev => prev.filter(item => item.id !== n.id))
+                              setNotifOpen(false)
+                              navigate('/announcements')
+                            } catch (e) {
+                              console.error(e)
+                            }
+                          }}
+                          className="w-full text-left p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-3"
+                        >
                           <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-blue-500`} />
                           <div>
                             <p className="text-sm text-slate-900 font-medium">{n.title}</p>
                             <p className="text-xs text-slate-500 mt-1 line-clamp-2">{n.message}</p>
                             <p className="text-[10px] text-slate-400 mt-2">{new Date(n.created_at).toLocaleDateString()}</p>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>

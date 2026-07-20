@@ -67,6 +67,16 @@ class User(UserMixin, db.Model):
     def is_student(self) -> bool:
         return self.role == RoleEnum.student
 
+    @property
+    def full_name(self) -> str:
+        if self.is_student and self.student_profile:
+            return self.student_profile.full_name
+        elif self.is_faculty and self.faculty_profile:
+            return self.faculty_profile.full_name
+        elif self.is_admin:
+            return "Administrator"
+        return self.email
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,

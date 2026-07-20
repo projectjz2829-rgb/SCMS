@@ -7,6 +7,8 @@ import { dashboardApi, DashboardStats } from '../api/dashboard'
 import { coursesApi, Course } from '../api/courses'
 import { announcementsApi, Announcement } from '../api/announcements'
 import { useAuth } from '../contexts/AuthContext'
+import { EmptyState } from './ui/EmptyState'
+import { BarChart as BarChartIcon, PieChart, Activity } from 'lucide-react'
 
 export default function FacultyDashboard() {
   const { user } = useAuth()
@@ -16,7 +18,7 @@ export default function FacultyDashboard() {
 
   useEffect(() => {
     dashboardApi.getStats().then(setStats).catch(console.error)
-    coursesApi.getAll().then(data => setMyCourses(data.slice(0, 3))).catch(console.error)
+    coursesApi.getAll().then(res => setMyCourses(res.data.slice(0, 3))).catch(console.error)
     announcementsApi.getAll().then(setAnnouncementsList).catch(console.error)
   }, [])
 
@@ -152,6 +154,31 @@ export default function FacultyDashboard() {
                 <p className="text-xs text-slate-400 mt-1">{new Date(a.created_at || '').toLocaleDateString()}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics (Empty States) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Course Averages & Pass Percentage</h2>
+          <div className="h-48 flex items-center justify-center">
+            <EmptyState 
+              icon={<BarChartIcon className="w-6 h-6 text-slate-400" />} 
+              title="No Analytics Data" 
+              description="Course averages and pass percentage data is currently unavailable." 
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-slate-900 mb-4">Grade Distribution & Student Performance</h2>
+          <div className="h-48 flex items-center justify-center">
+            <EmptyState 
+              icon={<PieChart className="w-6 h-6 text-slate-400" />} 
+              title="No Analytics Data" 
+              description="Grade distribution and student performance data is currently unavailable." 
+            />
           </div>
         </div>
       </div>

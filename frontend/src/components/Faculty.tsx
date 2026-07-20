@@ -1,12 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Search, Plus, Pencil, Trash2, X, Filter, Users, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, Pencil, Trash2, X, Filter, Users, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { facultyApi, Faculty } from '../api/faculty'
 import { useToast } from '../contexts/ToastContext'
 import { EmptyState } from './ui/EmptyState'
 import { SkeletonCard } from './ui/Skeleton'
 import { useDebounce } from '../hooks/useDebounce'
-
-const departments = ['Computer Science', 'Electrical Engineering', 'Mechanical Engineering', 'Civil Engineering', 'Business Administration']
+import { DEPARTMENTS } from '../utils/departments'
 
 const designations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer']
 
@@ -54,7 +53,7 @@ function Modal({ title, fac, onClose, onSave }: { title: string; fac: Partial<Fa
             <label className="block text-xs font-medium text-slate-600 mb-1">Department</label>
             <select value={form.dept || ''} onChange={e => set('dept', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50">
-              {departments.map(d => <option key={d}>{d}</option>)}
+              {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
             </select>
           </div>
           <div>
@@ -93,18 +92,27 @@ export default function FacultyList() {
   const [editModal, setEditModal] = useState<{ open: boolean; fac: Partial<Faculty> | null; isNew: boolean }>({ open: false, fac: null, isNew: false })
   const [viewModal, setViewModal] = useState<Faculty | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [loading, setLoading] = useState(true)
   const { success, error } = useToast()
 
-  useEffect(() => {
-    loadFaculty()
-  }, [])
+  const PER_PAGE = 8
 
   const loadFaculty = async () => {
     setLoading(true)
     try {
-      const items = await facultyApi.getAll()
-      setData(items)
+      const items = await facultyApi.getAll({
+        search: debouncedSearch,
+        dept: deptFilter,
+        designation: desigFilter,
+        page,
+        limit: PER_PAGE
+      })
+      setData(items.data)
+      setTotalPages(items.meta?.pages || 1)
+      setTotalItems(items.meta?.total || items.data.length)
     } catch (e) {
       error('Failed to load faculty')
     } finally {
@@ -112,29 +120,44 @@ export default function FacultyList() {
     }
   }
 
-  const filtered = useMemo(() => {
-    return data.filter(f =>
-      (!debouncedSearch || f.full_name?.toLowerCase().includes(debouncedSearch.toLowerCase()) || f.emp_id?.toLowerCase().includes(debouncedSearch.toLowerCase())) &&
-      (!deptFilter || f.dept === deptFilter) &&
-      (!desigFilter || f.designation === desigFilter)
-    )
-  }, [data, debouncedSearch, deptFilter, desigFilter])
+  useEffect(() => {
+    loadFaculty()
+  }, [debouncedSearch, deptFilter, desigFilter, page])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, deptFilter, desigFilter])
 
   const handleSave = async (form: Partial<Faculty>) => {
     try {
       if (editModal.isNew) {
-        await facultyApi.create(form)
-        success('Faculty added successfully')
-      } else {
-        if (form.id) {
-          await facultyApi.update(form.id, form)
-          success('Faculty updated successfully')
+        // Only send fields the backend schema accepts
+        const payload: Record<string, string> = {
+          emp_id: form.emp_id || '',
+          full_name: form.full_name || '',
+          dept: form.dept || '',
+          designation: form.designation || '',
+          email: form.email || '',
+          password: (form.emp_id || 'FAC') + '@Scms1',
         }
+        if (form.phone && form.phone.trim()) payload.phone = form.phone.trim()
+        await facultyApi.create(payload)
+        success('Faculty created successfully')
+      } else if (form.id) {
+        const updatePayload: Record<string, any> = {
+          full_name: form.full_name,
+          dept: form.dept,
+          designation: form.designation,
+          phone: form.phone?.trim()
+        }
+        await facultyApi.update(form.id, updatePayload)
+        success('Faculty updated successfully')
       }
       setEditModal({ open: false, fac: null, isNew: false })
       loadFaculty()
-    } catch (e) {
-      error('Failed to save faculty')
+    } catch (e: any) {
+      const msg = e.response?.data?.message || 'Failed to save faculty';
+      error(msg);
     }
   }
 
@@ -143,9 +166,9 @@ export default function FacultyList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Faculty</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{data.length} faculty members</p>
+          <p className="text-slate-500 text-sm mt-0.5">{totalItems} faculty members</p>
         </div>
-        <button onClick={() => setEditModal({ open: true, fac: { dept: departments[0], designation: designations[0] }, isNew: true })}
+        <button onClick={() => setEditModal({ open: true, fac: { dept: DEPARTMENTS[0], designation: designations[0] }, isNew: true })}
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm transition-all hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, #06B6D4, #0891B2)', boxShadow: '0 2px 8px rgba(6,182,212,0.3)' }}>
           <Plus className="w-4 h-4" /> Add Faculty
@@ -162,7 +185,7 @@ export default function FacultyList() {
         <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
           className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
           <option value="">Department: All</option>
-          {departments.map(d => <option key={d}>{d}</option>)}
+          {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
         </select>
         <select value={desigFilter} onChange={e => setDesigFilter(e.target.value)}
           className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
@@ -177,7 +200,7 @@ export default function FacultyList() {
           <SkeletonCard />
           <SkeletonCard />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : data.length === 0 ? (
         <EmptyState 
           icon={<Users className="w-6 h-6" />}
           title="No faculty found" 
@@ -185,7 +208,7 @@ export default function FacultyList() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(f => {
+          {data.map(f => {
             const [dbg, dfg] = deptColors[f.dept] || ['#F8FAFC', '#64748B']
             const [sbg, sfg] = desigColors[f.designation] || ['#F8FAFC', '#64748B']
             return (
@@ -210,6 +233,30 @@ export default function FacultyList() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && data.length > 0 && (
+        <div className="px-4 py-3 flex items-center justify-between bg-white rounded-2xl border border-slate-100 shadow-sm mt-4">
+          <p className="text-xs text-slate-500">Showing {Math.min((page - 1) * PER_PAGE + 1, totalItems)}–{Math.min(page * PER_PAGE, totalItems)} of {totalItems}</p>
+          <div className="flex items-center gap-1">
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setPage(p)}
+                className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${p === page ? 'text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                style={p === page ? { background: '#2563EB' } : {}}>
+                {p}
+              </button>
+            ))}
+            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 

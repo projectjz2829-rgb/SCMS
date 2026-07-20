@@ -26,7 +26,8 @@ export default function Attendance() {
   const { success, error } = useToast()
 
   useEffect(() => {
-    coursesApi.getAll().then(data => {
+    coursesApi.getAll().then(res => {
+      const data = res.data;
       setCourses(data)
       if (data.length > 0) {
         setSelectedCourse(data[0].id!)

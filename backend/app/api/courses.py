@@ -13,6 +13,7 @@ from app.models.course import Course, Enrollment
 from app.models.student import Student
 from app.models.faculty import Faculty
 from app.models.user import RoleEnum
+from app.models.activity import ActivityLog
 from app.auth.decorators import role_required
 
 courses_bp = Blueprint("courses", __name__)
@@ -34,55 +35,101 @@ def _idor_check_course_owner(course: Course) -> bool:
 
 # ─────────────────────────── list / create ──────────────────────────────── #
 
-@courses_bp.route("/", methods=["GET"])
+@courses_bp.route("/", methods=["GET", "POST"])
 @login_required
 @role_required("admin", "faculty", "student")
 @handle_api_exceptions
-def list_courses():
-    """GET /api/courses/ — All authenticated users."""
-    from sqlalchemy import func
-    query = (
-        db.session.query(
-            Course,
-            Faculty.full_name,
-            func.count(Enrollment.student_id)
+def manage_courses():
+    """GET /api/courses/ (list) or POST /api/courses/ (create)"""
+    if request.method == "GET":
+        from sqlalchemy import func
+        query = (
+            db.session.query(
+                Course,
+                Faculty.full_name,
+                func.count(Enrollment.student_id)
+            )
+            .outerjoin(Faculty, Course.faculty_id == Faculty.id)
+            .outerjoin(Enrollment, Course.id == Enrollment.course_id)
+            .group_by(Course.id, Faculty.id)
         )
-        .outerjoin(Faculty, Course.faculty_id == Faculty.id)
-        .outerjoin(Enrollment, Course.id == Enrollment.course_id)
-        .group_by(Course.id, Faculty.id)
-        .order_by(Course.code)
-    )
-    
-    results = query.all()
-    out = [
-        course.to_dict(faculty_name=fname, enrolled_count=ecount)
-        for course, fname, ecount in results
-    ]
-    return success_response(out)
+        
+        search = request.args.get("search", "").strip()
+        if search:
+            query = query.filter(db.or_(
+                Course.name.ilike(f"%{search}%"),
+                Course.code.ilike(f"%{search}%")
+            ))
+            
+        dept = request.args.get("dept", "").strip()
+        if dept:
+            query = query.filter(Course.dept == dept)
+            
+        semester = request.args.get("semester", "").strip()
+        if semester and semester.isdigit():
+            query = query.filter(Course.semester == int(semester))
+            
+        sort_by = request.args.get("sort", "code").strip()
+        valid_sorts = {
+            "code": Course.code,
+            "name": Course.name,
+            "dept": Course.dept,
+            "semester": Course.semester
+        }
+        if sort_by in valid_sorts:
+            query = query.order_by(valid_sorts[sort_by])
+        else:
+            query = query.order_by(Course.code)
+            
+        page_str = request.args.get("page")
+        limit_str = request.args.get("limit")
+        
+        if page_str or limit_str:
+            try:
+                page = int(page_str) if page_str else 1
+                limit = int(limit_str) if limit_str else 10
+                if page < 1: page = 1
+                if limit < 1: limit = 10
+                if limit > 100: limit = 100
+            except ValueError:
+                return error_response("Invalid page or limit parameter.", status_code=400)
+            
+            # Since query has group_by, simple .count() might fail or count groups.
+            # Using subquery for total count:
+            total = query.with_entities(func.count(Course.id)).count()
+            pages = (total + limit - 1) // limit
+            results = query.offset((page - 1) * limit).limit(limit).all()
+            
+            meta = {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "pages": pages
+            }
+            out = [
+                course.to_dict(faculty_name=fname, enrolled_count=ecount)
+                for course, fname, ecount in results
+            ]
+            return success_response(out, meta=meta)
+        else:
+            results = query.all()
+            out = [
+                course.to_dict(faculty_name=fname, enrolled_count=ecount)
+                for course, fname, ecount in results
+            ]
+            return success_response(out)
 
-
-@courses_bp.route("/", methods=["POST"])
-@login_required
-@role_required("admin")
-@handle_api_exceptions
-def create_course():
-    """
-    POST /api/courses/ — Admin only.
-
-    Validation rules (enforced for admin actions only):
-      - ``semester`` must be an integer between 1 and 8 inclusive.
-      - If ``faculty_id`` is supplied, the Faculty record's ``dept`` must
-        exactly match the ``dept`` of the course being created. Assigning a
-        faculty member from a different department is rejected with HTTP 400
-        so that course-faculty relationships remain department-consistent.
-    """
+    # POST (admin only enforcement via code since role_required allows others)
+    if current_user.role != RoleEnum.admin:
+        return error_response("Admin access required.", status_code=403)
+        
     data = request.get_json(silent=True) or {}
     
     from app.api.validators import validate_payload
     schema = {
         "name": {"type": str, "required": True, "max_length": 100},
         "code": {"type": str, "required": True, "max_length": 20},
-        "dept": {"type": str, "required": True, "max_length": 50},
+        "dept": {"type": str, "required": True, "max_length": 100},
         "semester": {"type": int, "required": True, "min_val": 1, "max_val": 8},
         "faculty_id": {"type": int, "required": False}
     }
@@ -116,6 +163,15 @@ def create_course():
     db.session.add(course)
     try:
         db.session.commit()
+        
+        log = ActivityLog(
+            action="book-open",
+            description=f"Created course {course.name} ({course.code})",
+            performed_by=current_user.id,
+            role=current_user.role.value
+        )
+        db.session.add(log)
+        db.session.commit()
     except IntegrityError:
         db.session.rollback()
         return error_response("Course code already exists.", status_code=409)
@@ -124,95 +180,93 @@ def create_course():
 
 # ─────────────────────────── update / delete ────────────────────────────── #
 
-@courses_bp.route("/<int:course_id>", methods=["PUT"])
+@courses_bp.route("/<int:course_id>", methods=["PUT", "DELETE"])
 @login_required
 @role_required("admin")
 @handle_api_exceptions
-def update_course(course_id: int):
-    """
-    PUT /api/courses/<id> — Admin only.
-
-    Validation rules (enforced for admin actions only):
-      - If ``semester`` is updated, it must remain an integer between 1 and 8.
-      - The target department is the updated ``dept`` value when supplied,
-        otherwise the course's current department.
-      - If ``faculty_id`` is updated, the faculty member's ``dept`` must match
-        the **target** department (after any dept change in this request).
-        If the department changes and the existing faculty no longer matches,
-        the request is rejected with HTTP 400 to prevent data inconsistency.
-    """
+def manage_course_id(course_id: int):
+    """PUT/DELETE /api/courses/<id> — Admin only."""
     course = db.session.get(Course, course_id)
     if not course:
         return error_response("Course not found.", status_code=404)
 
-    data = request.get_json(silent=True) or {}
-    
-    from app.api.validators import validate_payload
-    schema = {
-        "name": {"type": str, "required": False, "max_length": 100},
-        "dept": {"type": str, "required": False, "max_length": 50},
-        "semester": {"type": int, "required": False, "min_val": 1, "max_val": 8},
-        "faculty_id": {"type": int, "required": False}
-    }
-    cleaned_data, err_resp = validate_payload(data, schema)
-    if err_resp:
-        return err_resp
+    if request.method == "PUT":
+        data = request.get_json(silent=True) or {}
+        
+        from app.api.validators import validate_payload
+        schema = {
+            "name": {"type": str, "required": False, "max_length": 100},
+            "dept": {"type": str, "required": False, "max_length": 50},
+            "semester": {"type": int, "required": False, "min_val": 1, "max_val": 8},
+            "faculty_id": {"type": int, "required": False}
+        }
+        cleaned_data, err_resp = validate_payload(data, schema)
+        if err_resp:
+            return err_resp
 
-    # Determine the target department *before* persisting any changes so
-    # faculty-dept validation can compare against the final dept value.
-    if "dept" in cleaned_data:
-        target_dept = cleaned_data["dept"]
-    else:
-        target_dept = course.dept
+        # Determine the target department *before* persisting any changes so
+        # faculty-dept validation can compare against the final dept value.
+        if "dept" in cleaned_data:
+            target_dept = cleaned_data["dept"]
+        else:
+            target_dept = course.dept
 
-    if "faculty_id" in cleaned_data:
-        fid = cleaned_data["faculty_id"]
-        if fid:
-            faculty = db.session.get(Faculty, fid)
-            if not faculty:
-                return error_response("Faculty not found.", status_code=404)
+        if "faculty_id" in cleaned_data:
+            fid = cleaned_data["faculty_id"]
+            if fid:
+                faculty = db.session.get(Faculty, fid)
+                if not faculty:
+                    return error_response("Faculty not found.", status_code=404)
 
-            # ── Faculty department match validation (on update) ────────── #
-            # Validate against the *target* department so that a simultaneous
-            # dept + faculty_id update is also caught correctly.
-            if faculty.dept.strip().lower() != target_dept.lower():
+                # ── Faculty department match validation (on update) ────────── #
+                # Validate against the *target* department so that a simultaneous
+                # dept + faculty_id update is also caught correctly.
+                if faculty.dept.strip().lower() != target_dept.lower():
+                    return error_response("Faculty department does not match course department.", status_code=400)
+
+        elif "dept" in data and course.faculty_id:
+            # Department changed but faculty_id was not explicitly updated.
+            # Re-validate the *existing* faculty against the new target dept.
+            existing_faculty = db.session.get(Faculty, course.faculty_id)
+            if existing_faculty and existing_faculty.dept.strip().lower() != target_dept.strip().lower():
                 return error_response("Faculty department does not match course department.", status_code=400)
 
-    elif "dept" in data and course.faculty_id:
-        # Department changed but faculty_id was not explicitly updated.
-        # Re-validate the *existing* faculty against the new target dept.
-        existing_faculty = db.session.get(Faculty, course.faculty_id)
-        if existing_faculty and existing_faculty.dept.strip().lower() != target_dept.strip().lower():
-            return error_response("Faculty department does not match course department.", status_code=400)
+        # All validations passed, now mutate the course object
+        if "name" in cleaned_data:
+            course.name = cleaned_data["name"]
 
-    # All validations passed, now mutate the course object
-    if "name" in cleaned_data:
-        course.name = cleaned_data["name"]
+        if "dept" in cleaned_data:
+            course.dept = target_dept
 
-    if "dept" in cleaned_data:
-        course.dept = target_dept
+        if "semester" in cleaned_data and cleaned_data["semester"] is not None:
+            course.semester = cleaned_data["semester"]
 
-    if "semester" in cleaned_data and cleaned_data["semester"] is not None:
-        course.semester = cleaned_data["semester"]
+        if "faculty_id" in cleaned_data:
+            course.faculty_id = cleaned_data["faculty_id"]
 
-    if "faculty_id" in cleaned_data:
-        course.faculty_id = cleaned_data["faculty_id"]
+        log = ActivityLog(
+            action="edit",
+            description=f"Updated course {course.name} ({course.code})",
+            performed_by=current_user.id,
+            role=current_user.role.value
+        )
+        db.session.add(log)
+        db.session.commit()
+        return success_response(course.to_dict())
 
-    db.session.commit()
-    return success_response(course.to_dict())
-
-
-@courses_bp.route("/<int:course_id>", methods=["DELETE"])
-@login_required
-@role_required("admin")
-@handle_api_exceptions
-def delete_course(course_id: int):
-    """DELETE /api/courses/<id> — Admin only."""
-    course = db.session.get(Course, course_id)
-    if not course:
-        return error_response("Course not found.", status_code=404)
+    # DELETE
+    name = course.name
+    code = course.code
+    
     db.session.delete(course)
     
+    log = ActivityLog(
+        action="trash-2",
+        description=f"Deleted course {name} ({code})",
+        performed_by=current_user.id,
+        role=current_user.role.value
+    )
+    db.session.add(log)
     db.session.commit()
     return success_response(message="Course deleted.")
 

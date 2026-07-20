@@ -18,29 +18,29 @@ def _log_activity(action, desc):
     )
     db.session.add(log)
 
-@announcements_bp.route("/", methods=["GET"])
+@announcements_bp.route("/", methods=["GET", "POST"])
 @login_required
 @handle_api_exceptions
-def get_announcements():
-    query = Announcement.query
-    if current_user.role.value != "admin":
-        query = query.filter_by(active=True)
-        # Handle expiry client side or here
-    
-    announcements = query.order_by(Announcement.pinned.desc(), Announcement.created_at.desc()).all()
-    
-    # Filter out expired for non-admins
-    if current_user.role.value != "admin":
-        now = datetime.now(timezone.utc)
-        announcements = [a for a in announcements if not a.expiry_date or a.expiry_date > now]
+def manage_announcements():
+    if request.method == "GET":
+        query = Announcement.query
+        if current_user.role.value != "admin":
+            query = query.filter_by(active=True)
+            # Handle expiry client side or here
         
-    return success_response([a.to_dict() for a in announcements])
+        announcements = query.order_by(Announcement.pinned.desc(), Announcement.created_at.desc()).all()
+        
+        # Filter out expired for non-admins
+        if current_user.role.value != "admin":
+            now = datetime.now(timezone.utc)
+            announcements = [a for a in announcements if not a.expiry_date or a.expiry_date > now]
+            
+        return success_response([a.to_dict() for a in announcements])
 
-@announcements_bp.route("/", methods=["POST"])
-@login_required
-@role_required("admin")
-@handle_api_exceptions
-def create_announcement():
+    # POST
+    if current_user.role.value != "admin":
+        return error_response("Admin access required.", 403)
+        
     data = request.get_json(silent=True) or {}
     title = data.get("title")
     message = data.get("message")
@@ -70,46 +70,39 @@ def create_announcement():
     db.session.commit()
     return success_response(ann.to_dict(), status_code=201)
 
-@announcements_bp.route("/<int:ann_id>", methods=["PUT"])
+@announcements_bp.route("/<int:ann_id>", methods=["PUT", "DELETE"])
 @login_required
 @role_required("admin")
 @handle_api_exceptions
-def update_announcement(ann_id: int):
+def modify_announcement(ann_id: int):
     ann = db.session.get(Announcement, ann_id)
     if not ann:
         return error_response("Not found", 404)
         
-    data = request.get_json(silent=True) or {}
-    if "title" in data: ann.title = data["title"]
-    if "message" in data: ann.message = data["message"]
-    if "priority" in data: ann.priority = PriorityEnum(data["priority"])
-    if "pinned" in data: ann.pinned = bool(data["pinned"])
-    if "active" in data: ann.active = bool(data["active"])
-    if "expiry_date" in data:
-        if data["expiry_date"]:
-            try:
-                dt = datetime.fromisoformat(data["expiry_date"])
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                ann.expiry_date = dt
-            except ValueError:
-                pass
-        else:
-            ann.expiry_date = None
-    
-    _log_activity("Announcement Edited", f"Updated announcement: {ann.title}")
-    db.session.commit()
-    return success_response(ann.to_dict())
+    if request.method == "PUT":
+        data = request.get_json(silent=True) or {}
+        if "title" in data: ann.title = data["title"]
+        if "message" in data: ann.message = data["message"]
+        if "priority" in data: ann.priority = PriorityEnum(data["priority"])
+        if "pinned" in data: ann.pinned = bool(data["pinned"])
+        if "active" in data: ann.active = bool(data["active"])
+        if "expiry_date" in data:
+            if data["expiry_date"]:
+                try:
+                    dt = datetime.fromisoformat(data["expiry_date"])
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    ann.expiry_date = dt
+                except ValueError:
+                    pass
+            else:
+                ann.expiry_date = None
+        
+        _log_activity("Announcement Edited", f"Updated announcement: {ann.title}")
+        db.session.commit()
+        return success_response(ann.to_dict())
 
-@announcements_bp.route("/<int:ann_id>", methods=["DELETE"])
-@login_required
-@role_required("admin")
-@handle_api_exceptions
-def delete_announcement(ann_id: int):
-    ann = db.session.get(Announcement, ann_id)
-    if not ann:
-        return error_response("Not found", 404)
-        
+    # DELETE
     title = ann.title
     db.session.delete(ann)
     _log_activity("Announcement Deleted", f"Deleted announcement: {title}")

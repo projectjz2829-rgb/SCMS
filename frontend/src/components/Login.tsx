@@ -98,7 +98,10 @@ export default function Login({ onLogin }: Props) {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Required Id</label>
               <input
+                id="email"
+                name="email"
                 type="text"
+                autoComplete="username"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent"
@@ -112,7 +115,10 @@ export default function Login({ onLogin }: Props) {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
               <div className="relative">
                 <input
+                  id="password"
+                  name="password"
                   type={showPass ? 'text' : 'password'}
+                  autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="w-full px-4 py-2.5 pr-11 rounded-xl border border-slate-200 bg-white/80 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent"

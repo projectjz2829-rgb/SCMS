@@ -24,7 +24,14 @@ export const announcementsApi = {
     return data.data;
   },
   update: async (id: number, announcement: Partial<Announcement>): Promise<Announcement> => {
-    const { data } = await api.put(`/api/announcements/${id}`, announcement);
+    const payload: any = {}
+    if (announcement.title !== undefined) payload.title = announcement.title
+    if (announcement.message !== undefined) payload.message = announcement.message
+    if (announcement.priority !== undefined) payload.priority = announcement.priority
+    if (announcement.pinned !== undefined) payload.pinned = announcement.pinned
+    if (announcement.active !== undefined) payload.active = announcement.active
+    if (announcement.expiry_date !== undefined) payload.expiry_date = announcement.expiry_date
+    const { data } = await api.put(`/api/announcements/${id}`, payload);
     return data.data;
   },
   delete: async (id: number): Promise<void> => {

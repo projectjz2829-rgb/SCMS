@@ -202,12 +202,16 @@ def update_marks(mark_id: int):
 
 # ─────────────────────────── get by course ──────────────────────────────── #
 
-@marks_bp.route("/course/<int:course_id>", methods=["GET"])
+@marks_bp.route("/", methods=["GET"])
 @login_required
 @role_required("faculty", "admin")
 @handle_api_exceptions
-def get_marks_by_course(course_id: int):
-    """GET /api/marks/course/<id> — Faculty of that course or admin."""
+def get_marks():
+    """GET /api/marks/ — Faculty of that course or admin."""
+    course_id = request.args.get("course_id", type=int)
+    if not course_id:
+        return error_response("course_id query parameter is required.", status_code=400)
+        
     course = db.session.get(Course, course_id)
     if not course:
         return error_response("Course not found.", status_code=404)
@@ -218,3 +222,42 @@ def get_marks_by_course(course_id: int):
 
     records = Marks.query.filter_by(course_id=course_id).all()
     return success_response([r.to_dict() for r in records])
+
+# ─────────────────────────── get by id ────────────────────────────────────── #
+
+@marks_bp.route("/<int:mark_id>", methods=["GET"])
+@login_required
+@role_required("faculty", "admin")
+@handle_api_exceptions
+def get_mark_by_id(mark_id: int):
+    """GET /api/marks/<id>"""
+    mark = db.session.get(Marks, mark_id)
+    if not mark:
+        return error_response("Marks record not found.", status_code=404)
+        
+    course = db.session.get(Course, mark.course_id)
+    access_err = verify_faculty_course_access(course)
+    if access_err:
+        return access_err
+        
+    return success_response(mark.to_dict())
+
+# ─────────────────────────── delete ─────────────────────────────────────── #
+
+@marks_bp.route("/<int:mark_id>", methods=["DELETE"])
+@login_required
+@role_required("admin", "faculty")
+@handle_api_exceptions
+def delete_marks(mark_id: int):
+    """DELETE /api/marks/<id>"""
+    mark = db.session.get(Marks, mark_id)
+    if not mark:
+        return error_response("Marks record not found.", status_code=404)
+
+    if current_user.role == RoleEnum.faculty:
+        if not current_user.faculty_profile or mark.entered_by != current_user.faculty_profile.id:
+            return error_response("You did not enter these marks.", status_code=403)
+
+    db.session.delete(mark)
+    db.session.commit()
+    return success_response(message="Marks record deleted.")

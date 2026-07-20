@@ -32,7 +32,12 @@ export const marksApi = {
     return data.data;
   },
   update: async (id: number, marks: Partial<Marks>): Promise<Marks> => {
-    const { data } = await api.put(`/api/marks/${id}`, marks);
+    const payload: any = {}
+    if (marks.internal_1 !== undefined) payload.internal_1 = marks.internal_1
+    if (marks.internal_2 !== undefined) payload.internal_2 = marks.internal_2
+    if (marks.semester_final !== undefined) payload.semester_final = marks.semester_final
+    if (marks.practical !== undefined) payload.practical = marks.practical
+    const { data } = await api.put(`/api/marks/${id}`, payload);
     return data.data;
   },
   delete: async (id: number): Promise<void> => {

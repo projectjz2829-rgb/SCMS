@@ -18,9 +18,9 @@ export interface Student {
 }
 
 export const studentsApi = {
-  getAll: async (params?: any): Promise<Student[]> => {
+  getAll: async (params?: any): Promise<{ data: Student[], meta?: any }> => {
     const { data } = await api.get('/api/students/', { params });
-    return data.data;
+    return { data: data.data, meta: data.meta };
   },
   getById: async (id: number): Promise<Student> => {
     const { data } = await api.get(`/api/students/${id}`);
@@ -31,7 +31,13 @@ export const studentsApi = {
     return data.data;
   },
   update: async (id: number, student: Partial<Student>): Promise<Student> => {
-    const { data } = await api.put(`/api/students/${id}`, student);
+    const payload: any = {}
+    if (student.full_name !== undefined) payload.full_name = student.full_name
+    if (student.dept !== undefined) payload.dept = student.dept
+    if (student.year !== undefined) payload.year = Number(student.year)
+    if (student.section !== undefined) payload.section = student.section
+    if (student.phone !== undefined) payload.phone = student.phone
+    const { data } = await api.put(`/api/students/${id}`, payload);
     return data.data;
   },
   delete: async (id: number): Promise<void> => {

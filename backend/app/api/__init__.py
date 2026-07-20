@@ -13,8 +13,11 @@ from .attendance import attendance_bp
 from .marks import marks_bp
 from .announcements import announcements_bp
 from .activities import activities_bp
+from .settings import settings_bp
+from .notifications import notifications_bp
 
 from .dashboard import dashboard_api_bp
+from .reports import reports_bp
 
 def register_api_blueprints(app):
     """Register every API sub-blueprint onto the app."""
@@ -27,5 +30,8 @@ def register_api_blueprints(app):
     app.register_blueprint(marks_bp, url_prefix="/api/marks")
     app.register_blueprint(announcements_bp, url_prefix="/api/announcements")
     app.register_blueprint(activities_bp, url_prefix="/api/activities")
+    app.register_blueprint(settings_bp, url_prefix="/api/settings")
+    app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
+    app.register_blueprint(reports_bp, url_prefix="/api/reports")
 
 __all__ = ["register_api_blueprints"]

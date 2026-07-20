@@ -1,6 +1,6 @@
 from flask import jsonify
 
-def success_response(data=None, message="Success", status_code=200):
+def success_response(data=None, message="Success", status_code=200, meta=None):
     """
     Standardize successful API responses.
     """
@@ -10,6 +10,8 @@ def success_response(data=None, message="Success", status_code=200):
     }
     if data is not None:
         payload["data"] = data
+    if meta is not None:
+        payload["meta"] = meta
         
     return jsonify(payload), status_code
 

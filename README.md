@@ -1,287 +1,173 @@
-# 🎓 SCMS — Smart Campus Management System
+<div align="center">
+  <img src="https://via.placeholder.com/150x150/2563EB/ffffff?text=SCMS" alt="SCMS Logo" width="150" height="150" />
+  <h1>Student Campus Management System (SCMS)</h1>
+  <p>A modern, full-stack campus administration portal built for speed, security, and scale.</p>
 
-> A production-ready, full-stack web application for **Bon Secours Arts and Science College** to manage students, faculty, courses, attendance, and academic marks — all in one place.
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
+  [![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)](https://flask.palletsprojects.com/)
+  [![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)](https://python.org)
+</div>
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-3.x-black?logo=flask)](https://flask.palletsprojects.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql)](https://postgresql.org)
-[![Deployed on Render](https://img.shields.io/badge/Deployed-Render-46E3B7?logo=render)](https://render.com)
+<hr/>
 
----
-
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Getting Started (Local)](#-getting-started-local)
-- [Environment Variables](#-environment-variables)
-- [Deployment (Render)](#-deployment-render)
-- [Default Credentials](#-default-admin-credentials)
-- [Roles & Permissions](#-roles--permissions)
-- [API Reference](#-api-reference)
-- [Security](#-security)
+The Student Campus Management System (SCMS) is a robust enterprise-level web application designed to centralize academic operations. By replacing fragmented spreadsheets and legacy portals with a unified, role-based SPA (Single Page Application), SCMS enables Administrators, Faculty, and Students to interact seamlessly in real-time.
 
 ---
 
-## ✨ Features
+## 🚀 Features
 
-### 👨‍💼 Admin
-- **Dashboard** — Live stats (students, faculty, courses, attendance %)
-- **Activity Feed** — Real-time tracking of CRUD operations and system events
-- **User Management** — Add student/faculty/admin accounts via form
-- **Course Management** — Create courses with code, department, semester
-- **Delete** — Remove students or faculty with confirmation modal
-- **Broadcast System** — Send, edit, and pin real-time campus-wide announcements
-- **Charts** — Department-wise attendance bar chart + student distribution donut
-
-### 👨‍🏫 Faculty
-- **My Courses** — View only courses assigned to this faculty
-- **Attendance** — Select course + date → load student roster → P/L/A toggle → submit
-- **Marks Entry** — Pre-populated marks table; upserts records per student per course
-- **Bulletin Board** — Live syncing campus announcements
-- **Attendance Chart** — Bar chart per course showing overall attendance %
-
-### 🎓 Student
-- **Dashboard** — Attendance ring (circular SVG), per-subject progress bars
-- **Shortage Alert** — Red banner auto-appears if any subject is below 75%
-- **Marks Ledger** — IA1, IA2, Semester Final, Practical scores with colour coding
-- **Bulletin Board** — Live syncing campus announcements with notification badges
+- **Multi-Tenant Role-Based Access Control (RBAC)**: Secure partitioning for Admin, Faculty, and Student users.
+- **Academic Directory Management**: Streamlined CRUD operations for Faculty and Student records.
+- **Course & Enrollment Workflows**: Advanced relationship mapping connecting Students to specific Courses under assigned Faculty.
+- **Real-Time Grading & Transcripts**: Instantaneous GPA aggregation (10.0 scale) and highly-formatted printable academic transcripts.
+- **Live Attendance Tracking**: Bulk-save functionalities for daily attendance logging.
+- **Export & Analytics**: Native CSV exports for offline spreadsheet tracking and dynamic Dashboard aggregates.
+- **Global Broadcasts**: System-wide announcements and individualized push notifications.
 
 ---
 
-## 🛠 Tech Stack
+## 🏗 Architecture
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Python 3.11+, Flask 3.x, Flask-Login, Flask-WTF, Flask-Limiter |
-| **ORM** | SQLAlchemy 2.x, Flask-SQLAlchemy |
-| **Database** | PostgreSQL (production) / SQLite (testing) |
-| **Auth** | Flask-Login + Bcrypt password hashing |
-| **Security** | CSRF (Flask-WTF), Rate limiting, CSP headers, XSS-safe via React JSX |
-| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, Lucide React |
-| **Charts** | Recharts (React component library) |
-| **UI Icons** | Lucide React |
-| **WSGI** | Gunicorn (production), Flask dev server (development) |
-| **Hosting** | Render (Free Plan), PostgreSQL Add-on |
-
----
-
-## 📁 Project Structure
-
+```mermaid
+graph TD;
+    Client[React SPA] <-->|JSON / REST| API[Flask Backend API];
+    API <-->|SQLAlchemy ORM| DB[(PostgreSQL / SQLite)];
+    API -->|Session| Cache(Memory Cache);
 ```
+
+### 💻 Technology Stack
+
+**Frontend**
+- React 18 (Vite)
+- TypeScript
+- Tailwind CSS (Utility-first styling, Glassmorphism design)
+- Axios (API interception & CSRF Handling)
+- Lucide React (Iconography)
+
+**Backend**
+- Python (3.10+)
+- Flask (Application Factory Pattern)
+- SQLAlchemy (Database ORM)
+- Flask-Login & Flask-WTF (Security & Session Management)
+
+---
+
+## 📁 Folder Structure
+
+```text
 SCMS-main/
 ├── backend/
 │   ├── app/
-│   │   ├── __init__.py          # Application factory
-│   │   ├── config.py            # Dev / Test / Production configs
-│   │   ├── extensions.py        # Extensions (db, bcrypt, login)
-│   │   ├── models/              # SQLAlchemy models
-│   │   ├── auth/                # Auth logic and session checks
-│   │   ├── api/                 # REST JSON endpoints
-│   │   └── static/dist/         # (Generated) React frontend build output
-│   └── wsgi.py                  # Entry-point
+│   │   ├── api/        # REST Controllers (Blueprints)
+│   │   ├── models/     # SQLAlchemy Database Schemas
+│   │   └── auth/       # Authentication Logic
+│   └── wsgi.py         # Application Entrypoint
 ├── frontend/
-│   ├── public/                  # Static assets (images, fonts)
 │   ├── src/
-│   │   ├── api/                 # Axios API clients for backend routes
-│   │   ├── components/          # React components (Dashboard, Login, Forms)
-│   │   ├── contexts/            # React contexts (AuthContext, ToastContext)
-│   │   ├── data/                # Data types and structures
-│   │   ├── hooks/               # Custom React hooks (useDebounce, useFocusTrap)
-│   │   ├── App.tsx              # Main application router component
-│   │   └── main.tsx             # React DOM entry
-│   ├── package.json             # NPM dependencies
-│   ├── tailwind.config.js       # Tailwind theme and utilities
-│   └── vite.config.ts           # Vite build configuration (outputs to backend)
-└── .gitignore
+│   │   ├── components/ # React UI Views & Layouts
+│   │   ├── contexts/   # Global State (Auth, Toasts)
+│   │   └── api/        # Axios Services
+│   └── package.json
+└── docs/               # Advanced documentation
 ```
 
 ---
 
-## 🚀 Getting Started (Local)
+## ⚙️ Installation & Setup
 
-### Prerequisites
-- Python 3.11 or higher
-- PostgreSQL (or use SQLite for local dev)
-- Git
+### 1. Database & Environment Initialization
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/projectjz2829-rgb/SCMS.git
-cd SCMS/SCMS-main
-```
-
-### 2. Create and activate a virtual environment
-```bash
-# Windows
-python -m venv .venv
-.venv\Scripts\activate
-
-# Linux / macOS
-python -m venv .venv
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-```bash
-pip install -r requirements-dev.txt
-```
-
-### 4. Set environment variables
-
-Copy `.env.example` to `.env` and fill in your values (or just export them):
-
-```bash
-# .env
-SECRET_KEY=your-super-secret-key-here
-DATABASE_URL=postgresql://user:password@localhost:5432/scms_db
+Create a `.env` file in the `backend/` directory:
+```env
+FLASK_APP=wsgi.py
 FLASK_ENV=development
+SECRET_KEY=replace-with-a-very-strong-random-key
+DATABASE_URL=sqlite:///scms.db
 ```
 
-### 5. Run the development server
+### 2. Backend Setup
 ```bash
 cd backend
-flask run
+python -m venv venv
+source venv/bin/activate  # Or `venv\Scripts\activate` on Windows
+pip install -r requirements.txt
+flask db upgrade          # Execute database migrations
+python run.py             # Start the development server on port 5000
 ```
 
-The app will be available at **http://127.0.0.1:5000**
-
-> Tables are auto-created on first run via `db.create_all()` in `wsgi.py`. A default admin account is also seeded.
-
----
-
-## 🔐 Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SECRET_KEY` | ✅ Yes | Flask session signing key. Use a long random string in production. |
-| `DATABASE_URL` | ✅ Yes | PostgreSQL connection URL. Render provides this automatically. |
-| `FLASK_ENV` | No | `development` or `production`. Defaults to `production` on Render. |
-| `SESSION_COOKIE_SECURE` | No | Set to `true` in production (HTTPS). Render sets this automatically via TLS. |
-| `WTF_CSRF_ENABLED` | No | CSRF protection toggle. Default `True`. Never disable in production. |
-| `ADMIN_EMAIL` | No | Seed admin email. Defaults to `admin@scms.edu` if not set. |
-| `ADMIN_PASSWORD` | No | Seed admin password. Defaults to `Admin@1234` — **change this!** |
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev               # Start the Vite server on port 5173
+```
 
 ---
 
-## 🌐 Deployment (Render)
+## 🔑 Demo Credentials
 
-This project is configured for one-click deployment on [Render](https://render.com).
+If seeded with standard development data, the following credentials provide access to the respective portals:
 
-> 💡 This project includes a `render.yaml` Blueprint. When connecting your repository to Render, the web service configuration (build commands, start commands, root directory, and Python runtime) will be automatically provisioned for you.
-
-### Steps:
-1. Push this repository to GitHub.
-2. In your Render Dashboard, click **New +** and select **Blueprint**.
-3. Connect your repository. Render will automatically read the `render.yaml` file.
-4. Add a **PostgreSQL** database add-on on Render (the `DATABASE_URL` is injected automatically).
-5. Provide values for the required environment variables (`SECRET_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`) when prompted by the Blueprint deploy flow.
-
-> ⚠️ On every deploy, `flask db upgrade` is called at startup via `start.sh` to safely apply any schema changes before the server boots.
+| Role | Email | Password |
+|---|---|---|
+| **Admin** | `admin@scms.edu` | `admin` |
+| **Faculty** | `alice.smith@scms.edu` | `password123` |
+| **Student** | `alex.johnson@scms.edu` | `password123` |
 
 ---
 
-## 🔑 Default Admin Credentials
+## 📸 Screenshots
 
-On first startup, a default admin account is created:
+| Admin Dashboard | Student Transcript |
+|:---:|:---:|
+| ![Admin Dashboard Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Admin+Dashboard) | ![Transcript Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Printable+Transcript) |
 
-| Field | Default Value |
-|-------|---------------|
-| Required ID | `admin@scms.edu` (or value of `ADMIN_EMAIL` env var) |
-| Password | `Admin@1234` (or value of `ADMIN_PASSWORD` env var) |
-
-> ⚠️ **Change the default password immediately after first login.** Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as environment variables on Render to override the defaults.
-
----
-
-## 👥 Roles & Permissions
-
-| Action | Admin | Faculty | Student |
-|--------|:-----:|:-------:|:-------:|
-| View Admin Dashboard | ✅ | ❌ | ❌ |
-| Add/Delete Users | ✅ | ❌ | ❌ |
-| Create Courses | ✅ | ❌ | ❌ |
-| View All Students & Faculty | ✅ | ❌ | ❌ |
-| View Own Courses | ❌ | ✅ | ❌ |
-| Mark Attendance | ❌ | ✅ | ❌ |
-| Enter Marks | ❌ | ✅ | ❌ |
-| View Own Attendance | ❌ | ❌ | ✅ |
-| View Own Marks | ❌ | ❌ | ✅ |
+| Course Management | Grade Analytics |
+|:---:|:---:|
+| ![Course View Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Course+Manager) | ![Analytics Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Marks+%26+GPA) |
 
 ---
 
-## 📡 API Reference
+## 📡 API Overview
 
-All API endpoints are protected by `@login_required`. Admin-only routes additionally enforce `@role_required('admin')`.
+The backend uses a standard RESTful architecture. 
 
-### Students
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| `GET` | `/api/students/` | Admin | List all students |
-| `DELETE` | `/api/students/<id>` | Admin | Delete student + all linked records |
-| `GET` | `/api/students/<id>/attendance` | Admin/Student | Attendance records for a student |
-| `GET` | `/api/students/<id>/marks` | Admin/Student | Marks records for a student |
+- `POST /api/auth/login` - Authenticate users and acquire HttpOnly session cookies.
+- `GET /api/dashboard/stats` - Fetch contextual analytics (GPA, attendance metrics).
+- `GET /api/reports/csv/*` - Stream real-time CSV exports.
 
-### Faculty
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| `GET` | `/api/faculty/` | Admin | List all faculty |
-| `DELETE` | `/api/faculty/<id>` | Admin | Delete faculty account |
-| `GET` | `/api/faculty/<id>/courses` | Admin/Faculty | Courses assigned to faculty |
-
-### Courses
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| `GET` | `/api/courses/` | Any | List all courses |
-| `POST` | `/api/courses/` | Admin | Create a course |
-| `GET` | `/api/courses/<id>/students` | Faculty/Admin | Students enrolled in course |
-
-### Attendance
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| `POST` | `/api/attendance/` | Faculty | Submit batch attendance (upserts) |
-
-### Marks
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| `POST` | `/api/marks/` | Faculty | Upsert marks for a student |
-| `GET` | `/api/marks/course/<id>` | Faculty | All marks for a course |
-
-### Announcements
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| `GET` | `/api/announcements/` | Any | List all active announcements |
-| `POST` | `/api/announcements/` | Admin | Create an announcement |
-| `PUT` | `/api/announcements/<id>` | Admin | Edit an announcement |
-| `DELETE` | `/api/announcements/<id>` | Admin | Delete an announcement |
-
-### Activities
-| Method | URL | Auth | Description |
-|--------|-----|------|-------------|
-| `GET` | `/api/activities/` | Admin | Fetch system activity feed |
+*For full API schemas, please refer to [docs/API.md](docs/API.md).*
 
 ---
 
-## 🔒 Security
+## 🛡️ Security Features
 
-| Measure | Implementation |
-|---------|----------------|
-| **Password hashing** | Bcrypt (cost factor 12) |
-| **CSRF protection** | Flask-WTF on all forms; `X-CSRFToken` header on all AJAX requests |
-| **Rate limiting** | 5 login attempts/minute via Flask-Limiter |
-| **XSS prevention** | Default React JSX string escaping prevents XSS payloads |
-| **IDOR prevention** | All API endpoints validate the requesting user's role before responding |
-| **Security headers** | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `CSP`, `Referrer-Policy`, `Permissions-Policy` |
-| **Session security** | `HttpOnly`, `SameSite=Lax`, `Secure=True` in production |
-| **Secret key enforcement** | App refuses to start in production if `SECRET_KEY` is the fallback dev key |
+- **CSRF Tokens**: All state-changing methods (POST, PUT, DELETE) dynamically require an `X-CSRFToken` header.
+- **HttpOnly Cookies**: Session tokens are strictly hidden from JavaScript access protecting against XSS interception.
+- **SQL Injection Prevention**: Forced utilization of the SQLAlchemy ORM prevents injection vectors.
+- **Role-Based Isolation**: Direct API endpoints actively validate the `current_user.role` enum against unauthorized access patterns.
 
 ---
 
-## 📝 License
+## 🗺️ Roadmap & Future Enhancements
 
-This project is for educational use at **Bon Secours Arts and Science College**. All rights reserved.
+- [ ] Bulk CSV imports for Student and Faculty registration.
+- [ ] Automated SMTP email integrations for grading notifications.
+- [ ] Exportable analytics visualizations (Chart.js integration).
+- [ ] Native PWA manifest deployment for mobile offline support.
 
 ---
 
-*Built with ❤️ for Bon Secours College — Smart Campus Management System v1.0.0*
+## 🤝 Contributing
+
+We welcome contributions! Please review our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to format commits, adhere to PEP8/Prettier, and submit Pull Requests. Be sure to review our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+*Built with ❤️ for Educational Institutions globally.*

@@ -11,6 +11,8 @@ from app.models.attendance import Attendance, AttendanceStatusEnum
 from app.models.marks import Marks
 from app.models.announcement import Announcement, PriorityEnum
 from app.models.activity import ActivityLog
+from app.models.settings import UserSettings
+from app.models.announcement_read import AnnouncementRead
 
 __all__ = [
     "User",
@@ -25,4 +27,6 @@ __all__ = [
     "Announcement",
     "PriorityEnum",
     "ActivityLog",
+    "UserSettings",
+    "AnnouncementRead",
 ]

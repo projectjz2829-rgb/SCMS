@@ -19,7 +19,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     dashboardApi.getStats().then(setStats).catch(console.error)
-    coursesApi.getAll().then(data => setMyCourses(data.slice(0, 3))).catch(console.error)
+    coursesApi.getAll().then(res => setMyCourses(res.data.slice(0, 3))).catch(console.error)
     announcementsApi.getAll().then(setAnnouncementsList).catch(console.error)
     marksApi.getAll().then(setMyMarks).catch(console.error)
   }, [])

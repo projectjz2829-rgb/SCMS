@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Eye, Pencil, Trash2, X, ChevronLeft, ChevronRight, Filter, Loader2, Users } from 'lucide-react'
 import { studentsApi, Student } from '../api/students'
 import { useToast } from '../contexts/ToastContext'
 import { EmptyState } from './ui/EmptyState'
 import { SkeletonTable } from './ui/Skeleton'
 import { useDebounce } from '../hooks/useDebounce'
-const departments = ['Computer Science', 'Electrical Engineering', 'Mechanical Engineering', 'Civil Engineering', 'Business Administration']
+import { DEPARTMENTS } from '../utils/departments'
+
 const years = [1, 2, 3, 4]
 const sections = ['A', 'B', 'C']
 
@@ -58,7 +59,7 @@ function Modal({ title, student, onClose, onSave }: { title: string; student: Pa
             <label className="block text-xs font-medium text-slate-600 mb-1">Department</label>
             <select value={form.dept || ''} onChange={e => set('dept', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50">
-              {departments.map(d => <option key={d}>{d}</option>)}
+              {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
             </select>
           </div>
           <div>
@@ -147,18 +148,25 @@ export default function Students() {
   const [editModal, setEditModal] = useState<{ open: boolean; student: Partial<Student> | null; isNew: boolean }>({ open: false, student: null, isNew: false })
   const [viewModal, setViewModal] = useState<Student | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [loading, setLoading] = useState(true)
   const { success, error } = useToast()
-
-  useEffect(() => {
-    loadStudents()
-  }, [])
 
   const loadStudents = async () => {
     setLoading(true)
     try {
-      const items = await studentsApi.getAll()
-      setData(items)
+      const items = await studentsApi.getAll({
+        search: debouncedSearch,
+        dept: deptFilter,
+        year: yearFilter,
+        section: sectionFilter,
+        page,
+        limit: PER_PAGE
+      })
+      setData(items.data)
+      setTotalPages(items.meta?.pages || 1)
+      setTotalItems(items.meta?.total || items.data.length)
     } catch (e) {
       error('Failed to load students')
     } finally {
@@ -166,37 +174,46 @@ export default function Students() {
     }
   }
 
-  const filtered = useMemo(() => {
-    return data.filter(s =>
-      (!debouncedSearch || s.full_name?.toLowerCase().includes(debouncedSearch.toLowerCase()) || s.roll_no?.toLowerCase().includes(debouncedSearch.toLowerCase())) &&
-      (!deptFilter || s.dept === deptFilter) &&
-      (!yearFilter || s.year === Number(yearFilter)) &&
-      (!sectionFilter || s.section === sectionFilter)
-    )
-  }, [data, debouncedSearch, deptFilter, yearFilter, sectionFilter])
+  useEffect(() => {
+    loadStudents()
+  }, [debouncedSearch, deptFilter, yearFilter, sectionFilter, page])
 
   useEffect(() => {
     setPage(1)
   }, [debouncedSearch, deptFilter, yearFilter, sectionFilter])
 
-  const totalPages = Math.ceil(filtered.length / PER_PAGE)
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
-
   const handleSave = async (form: Partial<Student>) => {
     try {
       if (editModal.isNew) {
-        await studentsApi.create(form)
-        success('Student added successfully')
-      } else {
-        if (form.id) {
-          await studentsApi.update(form.id, form)
-          success('Student updated successfully')
+        // Only send fields the backend schema accepts
+        const payload: Record<string, any> = {
+          roll_no: form.roll_no || '',
+          full_name: form.full_name || '',
+          dept: form.dept || '',
+          year: Number(form.year) || 1,
+          section: form.section || '',
+          email: form.email || '',
+          password: (form.roll_no || 'STU') + '@Scms1',
         }
+        if (form.phone && form.phone.trim()) payload.phone = form.phone.trim()
+        await studentsApi.create(payload)
+        success('Student created successfully')
+      } else if (form.id) {
+        const updatePayload: Record<string, any> = {
+          full_name: form.full_name,
+          dept: form.dept,
+          year: form.year ? Number(form.year) : undefined,
+          section: form.section,
+          phone: form.phone?.trim()
+        }
+        await studentsApi.update(form.id, updatePayload)
+        success('Student updated successfully')
       }
       setEditModal({ open: false, student: null, isNew: false })
       loadStudents()
-    } catch (e) {
-      error('Failed to save student')
+    } catch (e: any) {
+      const msg = e.response?.data?.message || 'Failed to save student';
+      error(msg);
     }
   }
 
@@ -206,10 +223,10 @@ export default function Students() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Students</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{data.length} students enrolled</p>
+          <p className="text-slate-500 text-sm mt-0.5">{totalItems} students enrolled</p>
         </div>
         <button
-          onClick={() => setEditModal({ open: true, student: { dept: departments[0], year: 1, section: 'A' }, isNew: true })}
+          onClick={() => setEditModal({ open: true, student: { dept: DEPARTMENTS[0], year: 1, section: 'A' }, isNew: true })}
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl shadow-sm transition-all hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}
         >
@@ -226,7 +243,7 @@ export default function Students() {
         </div>
         <Filter className="w-4 h-4 text-slate-400" />
         {[
-          { val: deptFilter, set: setDeptFilter, opts: departments, placeholder: 'Department' },
+          { val: deptFilter, set: setDeptFilter, opts: DEPARTMENTS, placeholder: 'Department' },
           { val: yearFilter, set: setYearFilter, opts: years.map(String), placeholder: 'Year' },
           { val: sectionFilter, set: setSectionFilter, opts: sections, placeholder: 'Section' },
         ].map(({ val, set, opts, placeholder }) => (
@@ -262,7 +279,7 @@ export default function Students() {
                     <SkeletonTable rows={5} cols={8} />
                   </td>
                 </tr>
-              ) : paginated.length === 0 ? (
+              ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-4">
                     <EmptyState 
@@ -272,7 +289,7 @@ export default function Students() {
                     />
                   </td>
                 </tr>
-              ) : paginated.map(s => (
+              ) : data.map(s => (
                 <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group">
                   <td className="px-4 py-3.5 font-mono text-xs text-slate-600 whitespace-nowrap">{s.roll_no}</td>
                   <td className="px-4 py-3.5">
@@ -303,7 +320,7 @@ export default function Students() {
 
         {/* Pagination */}
         <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-          <p className="text-xs text-slate-500">Showing {Math.min((page - 1) * PER_PAGE + 1, filtered.length)}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}</p>
+          <p className="text-xs text-slate-500">Showing {Math.min((page - 1) * PER_PAGE + 1, totalItems)}–{Math.min(page * PER_PAGE, totalItems)} of {totalItems}</p>
           <div className="flex items-center gap-1">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">

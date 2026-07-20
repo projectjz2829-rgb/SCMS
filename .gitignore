@@ -7,26 +7,25 @@ __pycache__/
 # ─── Flask / SQLite ───────────────────────────────────────────────────────────
 instance/
 *.db
+*.sqlite
 *.sqlite3
 
 # ─── Environment secrets — NEVER commit ──────────────────────────────────────
 .env
 .env.*
-# Keep the example template committed
 !.env.example
 
 # ─── Application logs ────────────────────────────────────────────────────────
 logs/
 *.log
 
-# ─── Migration versions — commit these so Render can run flask db upgrade ────
-# (remove this block only if you want to commit migration scripts)
-# migrations/versions/
-
 # ─── Test & coverage artefacts ───────────────────────────────────────────────
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
 htmlcov/
+coverage/
 coverage.xml
 
 # ─── Build / packaging ───────────────────────────────────────────────────────
@@ -36,7 +35,6 @@ build/
 *.egg-info/
 *.egg
 .eggs/
-!backend/app/static/dist
 
 # ─── Virtual environments ─────────────────────────────────────────────────────
 venv/
@@ -55,3 +53,13 @@ desktop.ini
 *.swp
 *.swo
 *.orig
+
+# ─── Temporary / Agent Artifacts ──────────────────────────────────────────────
+tmp/
+temp/
+.cache/
+scratch/
+checkpoints/
+generated_reports/
+browser_traces/
+AI_reports/

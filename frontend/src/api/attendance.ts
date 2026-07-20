@@ -26,7 +26,9 @@ export const attendanceApi = {
     await api.post('/api/attendance/', data);
   },
   update: async (id: number, attendance: Partial<Attendance>): Promise<Attendance> => {
-    const { data } = await api.put(`/api/attendance/${id}`, attendance);
+    const payload: any = {}
+    if (attendance.status !== undefined) payload.status = attendance.status
+    const { data } = await api.put(`/api/attendance/${id}/update`, payload);
     return data.data;
   },
   delete: async (id: number): Promise<void> => {

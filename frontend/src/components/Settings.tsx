@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Moon, Sun, Monitor, Bell, BellOff, Lock, Eye, EyeOff, CheckCircle, Shield } from 'lucide-react'
+import { settingsApi } from '../api/settings'
 
 const tabs = ['Theme', 'Notifications', 'Security'] as const
 type Tab = typeof tabs[number]
@@ -15,6 +16,50 @@ export default function Settings() {
   const [saved, setSaved] = useState('')
 
   const showSaved = (msg: string) => { setSaved(msg); setTimeout(() => setSaved(''), 2500) }
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await settingsApi.getSettings()
+        if (data) {
+          setTheme(data.theme as 'light' | 'dark' | 'system' || 'light')
+          setNotifs(data.notifications)
+        }
+      } catch (err) {
+        console.error('Failed to load settings', err)
+      }
+    }
+    loadSettings()
+  }, [])
+
+  const saveTheme = async () => {
+    try {
+      await settingsApi.updateSettings({ theme })
+      showSaved('Theme saved')
+    } catch (err) {
+      console.error('Failed to save theme', err)
+    }
+  }
+
+  const saveNotifs = async () => {
+    try {
+      await settingsApi.updateSettings({ notifications: notifs })
+      showSaved('Notification preferences saved')
+    } catch (err) {
+      console.error('Failed to save notifications', err)
+    }
+  }
+
+  const handlePasswordUpdate = async () => {
+    try {
+      await settingsApi.updatePassword(pwForm.current, pwForm.newPw)
+      setPwForm({ current: '', newPw: '', confirm: '' })
+      showSaved('Password updated successfully')
+    } catch (err) {
+      console.error('Failed to update password', err)
+      alert('Failed to update password. Check current password.')
+    }
+  }
 
   const themeOptions = [
     { value: 'light', label: 'Light', icon: <Sun className="w-5 h-5" /> },
@@ -32,7 +77,7 @@ export default function Settings() {
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
         {tabs.map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
+          <button key={tab} type="button" onClick={() => setActiveTab(tab)}
             className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-150 ${
               activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}>
@@ -47,7 +92,7 @@ export default function Settings() {
           <h3 className="text-sm font-semibold text-slate-900">Appearance</h3>
           <div className="grid grid-cols-3 gap-3">
             {themeOptions.map(opt => (
-              <button key={opt.value} onClick={() => setTheme(opt.value)}
+              <button key={opt.value} type="button" onClick={() => setTheme(opt.value)}
                 className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all ${
                   theme === opt.value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
                 }`}>
@@ -58,7 +103,7 @@ export default function Settings() {
             ))}
           </div>
           <p className="text-xs text-slate-400">Theme changes are applied immediately across the portal.</p>
-          <button onClick={() => showSaved('Theme saved')} className="px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90" style={{ background: '#2563EB' }}>
+          <button type="button" onClick={saveTheme} className="px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90" style={{ background: '#2563EB' }}>
             Save Preferences
           </button>
         </div>
@@ -86,6 +131,7 @@ export default function Settings() {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setNotifs(n => ({ ...n, [key]: !n[key] }))}
                 className={`relative w-11 h-6 rounded-full transition-all duration-200 ${notifs[key] ? '' : 'bg-slate-200'}`}
                 style={notifs[key] ? { background: '#2563EB' } : {}}>
@@ -93,7 +139,7 @@ export default function Settings() {
               </button>
             </div>
           ))}
-          <button onClick={() => showSaved('Notification preferences saved')} className="mt-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90" style={{ background: '#2563EB' }}>
+          <button type="button" onClick={saveNotifs} className="mt-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90" style={{ background: '#2563EB' }}>
             Save Preferences
           </button>
         </div>
@@ -137,7 +183,8 @@ export default function Settings() {
               </div>
             ))}
             <button
-              onClick={() => { setPwForm({ current: '', newPw: '', confirm: '' }); showSaved('Password updated successfully') }}
+              type="button"
+              onClick={handlePasswordUpdate}
               disabled={!pwForm.current || !pwForm.newPw || pwForm.newPw !== pwForm.confirm}
               className="px-4 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 hover:opacity-90 transition-opacity"
               style={{ background: '#2563EB' }}>

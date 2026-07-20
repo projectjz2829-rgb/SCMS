@@ -7,6 +7,8 @@ import { Users, UserCheck, BookOpen, ClipboardList, TrendingUp, TrendingDown, Ac
 import { dashboardApi } from '../api/dashboard'
 import { announcementsApi, Announcement } from '../api/announcements'
 import { activitiesApi, Activity as ActivityModel } from '../api/activities'
+import { notificationsApi } from '../api/notifications'
+import { Bell } from 'lucide-react'
 
 const defaultStats = [
   { id: 'students', label: 'Total Students', value: 0, icon: <Users className="w-5 h-5" />, color: '#2563EB', bg: '#EFF6FF', change: '+12', up: true },
@@ -24,6 +26,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(defaultStats)
   const [activitiesList, setActivitiesList] = useState<ActivityModel[]>([])
   const [announcementsList, setAnnouncementsList] = useState<Announcement[]>([])
+  const [notificationsList, setNotificationsList] = useState<Announcement[]>([])
   const [attendanceTrendList, setAttendanceTrendList] = useState<{month: string, attendance: number}[]>([])
   const [studentsByDeptList, setStudentsByDeptList] = useState<{name: string, students: number, fill: string}[]>([])
 
@@ -60,9 +63,24 @@ export default function Dashboard() {
         console.error("Failed to load announcements", e)
       }
     }
+    async function loadNotifications() {
+      try {
+        const data = await notificationsApi.getUnread()
+        setNotificationsList(data.slice(0, 5))
+      } catch (e) {
+        console.error("Failed to load notifications", e)
+      }
+    }
     loadStats()
     loadActivities()
     loadAnnouncements()
+    loadNotifications()
+    
+    // Auto-refresh for dashboard widget
+    const interval = setInterval(() => {
+        loadNotifications()
+    }, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   return (
@@ -149,7 +167,7 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Recent Activity */}
         <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -198,7 +216,30 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 truncate">{ann.message}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">by {ann.creator_name} • {new Date(ann.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{new Date(ann.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Unread Notifications */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-slate-900">Unread Notifications</h2>
+            <Bell className="w-4 h-4 text-slate-400" />
+          </div>
+          <div className="space-y-3">
+            {notificationsList.length === 0 && (
+                <div className="text-sm text-slate-500 text-center py-4">No unread notifications</div>
+            )}
+            {notificationsList.map(n => (
+              <div key={n.id} className="flex items-start gap-3 py-2 border-b border-slate-50 last:border-0">
+                <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-blue-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">{n.title}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">{n.message}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             ))}

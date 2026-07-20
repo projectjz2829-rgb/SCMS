@@ -15,7 +15,7 @@ export interface AuthResponse {
 export const authApi = {
   checkSession: async (): Promise<AuthResponse> => {
     const { data } = await api.get('/api/auth/me');
-    return data;
+    return data.data; // Unwrap Flask success_response payload
   },
   
   // Login directly posts to the Flask /login route, but we'll adapt Flask to return JSON.

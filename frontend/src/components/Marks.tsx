@@ -14,17 +14,19 @@ type MarkRow = {
   internal2: number
   semester: number
   practical: number
+  markId?: number
 }
 
 function calcTotal(r: MarkRow) { return r.internal1 + r.internal2 + r.semester + r.practical }
 function calcGrade(total: number): [string, number] {
-  if (total >= 110) return ['A+', 4.0]
-  if (total >= 100) return ['A', 4.0]
-  if (total >= 90) return ['B+', 3.5]
-  if (total >= 80) return ['B', 3.0]
-  if (total >= 70) return ['C', 2.0]
-  if (total >= 60) return ['D', 1.0]
-  return ['F', 0]
+  const max_marks = 175;
+  const pct = (total / max_marks) * 100;
+  if (pct >= 90) return ['O', 10.0]
+  if (pct >= 80) return ['A+', 9.0]
+  if (pct >= 70) return ['A', 8.0]
+  if (pct >= 60) return ['B+', 7.0]
+  if (pct >= 50) return ['B', 6.0]
+  return ['U', 0.0]
 }
 
 const initialRows = (courseStudents: any[], existingMarks: MarkRecord[]): MarkRow[] => {
@@ -38,6 +40,7 @@ const initialRows = (courseStudents: any[], existingMarks: MarkRecord[]): MarkRo
       internal2: ex?.internal_2 || 0,
       semester: ex?.semester_final || 0,
       practical: ex?.practical || 0,
+      markId: ex?.id
     }
   })
 }
@@ -52,7 +55,8 @@ export default function Marks() {
   const { success, error } = useToast()
 
   useEffect(() => {
-    coursesApi.getAll().then(data => {
+    coursesApi.getAll().then(res => {
+      const data = res.data;
       setCourses(data)
       if (data.length > 0) {
         setSelectedCourse(data[0].id!)
@@ -78,6 +82,26 @@ export default function Marks() {
 
   const updateField = (studentId: number, field: keyof MarkRow, val: number) => {
     setRows(rs => rs.map(r => r.studentId === studentId ? { ...r, [field]: val } : r))
+  }
+
+  const handleDelete = async (markId: number) => {
+    if (!window.confirm("Are you sure you want to delete this mark record?")) return
+    setLoading(true)
+    try {
+      await marksApi.delete(markId)
+      success('Mark deleted successfully')
+      
+      // Refresh list
+      const [students, marks] = await Promise.all([
+        coursesApi.getStudents(selectedCourse!),
+        marksApi.getAll({ course_id: selectedCourse! })
+      ])
+      setRows(initialRows(students, marks))
+    } catch (e) {
+      console.error(e)
+      error('Failed to delete mark')
+      setLoading(false)
+    }
   }
 
   const handleSave = async () => {
@@ -110,10 +134,12 @@ export default function Marks() {
   const maxMap: Record<string, number> = { internal1: 20, internal2: 20, semester: 50, practical: 25 }
 
   const gradeColor: Record<string, [string, string]> = {
-    'A+': ['#F0FDF4', '#22C55E'], 'A': ['#F0FDF4', '#22C55E'],
-    'B+': ['#EFF6FF', '#2563EB'], 'B': ['#EFF6FF', '#2563EB'],
-    'C': ['#FFFBEB', '#F59E0B'], 'D': ['#FFFBEB', '#F59E0B'],
-    'F': ['#FEF2F2', '#EF4444'],
+    'O': ['#F0FDF4', '#22C55E'],
+    'A+': ['#F0FDF4', '#22C55E'], 
+    'A': ['#EFF6FF', '#2563EB'],
+    'B+': ['#EFF6FF', '#2563EB'], 
+    'B': ['#FFFBEB', '#F59E0B'],
+    'U': ['#FEF2F2', '#EF4444'],
   }
 
   return (
@@ -165,6 +191,7 @@ export default function Marks() {
                 <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Grade</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">GPA</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -218,6 +245,16 @@ export default function Marks() {
                       <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: gbg, color: gfg }}>{grade}</span>
                     </td>
                     <td className="px-4 py-3.5 text-center text-sm font-semibold text-slate-700">{points.toFixed(1)}</td>
+                    <td className="px-4 py-3.5 text-right">
+                      {r.markId && (
+                        <button
+                          onClick={() => handleDelete(r.markId!)}
+                          className="px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 )
               })}

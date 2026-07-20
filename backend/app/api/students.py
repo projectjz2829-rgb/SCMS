@@ -18,6 +18,7 @@ from app.models.user import RoleEnum, User
 from app.models.attendance import Attendance
 from app.models.marks import Marks
 from app.models.course import Enrollment
+from app.models.activity import ActivityLog
 from app.auth.decorators import role_required
 
 students_bp = Blueprint("students", __name__)
@@ -91,27 +92,76 @@ def _faculty_teaches_student(student_id: int) -> bool:
 
 # ─────────────────────────── list / create ──────────────────────────────── #
 
-@students_bp.route("/", methods=["GET"])
+@students_bp.route("/", methods=["GET", "POST"])
 @login_required
 @role_required("admin")
 @handle_api_exceptions
-def list_students():
-    """GET /api/students/ — Admin only."""
-    results = (
-        db.session.query(Student, User.email)
-        .join(User, User.id == Student.user_id)
-        .order_by(Student.roll_no)
-        .all()
-    )
-    return success_response([s.to_dict(email=e) for s, e in results])
+def manage_students():
+    """GET /api/students/ (list) or POST /api/students/ (create) — Admin only."""
+    if request.method == "GET":
+        query = db.session.query(Student, User.email).join(User, User.id == Student.user_id)
+        
+        search = request.args.get("search", "").strip()
+        if search:
+            query = query.filter(db.or_(
+                Student.full_name.ilike(f"%{search}%"),
+                Student.roll_no.ilike(f"%{search}%")
+            ))
+            
+        dept = request.args.get("dept", "").strip()
+        if dept:
+            query = query.filter(Student.dept == dept)
+            
+        year = request.args.get("year", "").strip()
+        if year and year.isdigit():
+            query = query.filter(Student.year == int(year))
+            
+        section = request.args.get("section", "").strip()
+        if section:
+            query = query.filter(Student.section == section)
+            
+        sort_by = request.args.get("sort", "roll_no").strip()
+        valid_sorts = {
+            "roll_no": Student.roll_no,
+            "full_name": Student.full_name,
+            "dept": Student.dept,
+            "year": Student.year,
+            "section": Student.section
+        }
+        if sort_by in valid_sorts:
+            query = query.order_by(valid_sorts[sort_by])
+        else:
+            query = query.order_by(Student.roll_no)
+            
+        page_str = request.args.get("page")
+        limit_str = request.args.get("limit")
+        
+        if page_str or limit_str:
+            try:
+                page = int(page_str) if page_str else 1
+                limit = int(limit_str) if limit_str else 10
+                if page < 1: page = 1
+                if limit < 1: limit = 10
+                if limit > 100: limit = 100
+            except ValueError:
+                return error_response("Invalid page or limit parameter.", status_code=400)
+            
+            total = query.count()
+            pages = (total + limit - 1) // limit
+            results = query.offset((page - 1) * limit).limit(limit).all()
+            
+            meta = {
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "pages": pages
+            }
+            return success_response([s.to_dict(email=e) for s, e in results], meta=meta)
+        else:
+            results = query.all()
+            return success_response([s.to_dict(email=e) for s, e in results])
 
-
-@students_bp.route("/", methods=["POST"])
-@login_required
-@role_required("admin")
-@handle_api_exceptions
-def create_student():
-    """POST /api/students/ — Admin only."""
+    # POST
     data = request.get_json(silent=True) or {}
     
     from app.api.validators import validate_payload
@@ -120,10 +170,10 @@ def create_student():
         "password": {"type": str, "required": True, "min_length": 6},
         "roll_no": {"type": str, "required": True, "max_length": 20},
         "full_name": {"type": str, "required": True, "max_length": 100},
-        "dept": {"type": str, "required": True, "max_length": 50},
+        "dept": {"type": str, "required": True, "max_length": 100},
         "year": {"type": int, "required": True, "min_val": 1, "max_val": 4},
         "section": {"type": str, "required": True, "max_length": 10},
-        "phone": {"type": str, "required": False, "min_length": 7, "max_length": 15, "regex": r"^[0-9+\-\s]+$"}
+        "phone": {"type": str, "required": False, "max_length": 20}
     }
     cleaned_data, err_resp = validate_payload(data, schema)
     if err_resp:
@@ -160,6 +210,14 @@ def create_student():
             phone=cleaned_data.get("phone"),
         )
         db.session.add(student)
+        
+        log = ActivityLog(
+            action="user-plus",
+            description=f"Created student record for {student.full_name} ({student.roll_no})",
+            performed_by=current_user.id,
+            role=current_user.role.value
+        )
+        db.session.add(log)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -170,89 +228,88 @@ def create_student():
 
 # ─────────────────────────── read / update / delete ─────────────────────── #
 
-@students_bp.route("/<int:student_id>", methods=["GET"])
+@students_bp.route("/<int:student_id>", methods=["GET", "PUT", "DELETE"])
 @login_required
 @role_required("admin", "faculty", "student")
 @handle_api_exceptions
-def get_student(student_id: int):
-    """GET /api/students/<id> — Admin or own student."""
-    student = _get_student_or_404(student_id)
-    if not student:
-        return error_response("Student not found.", status_code=404)
-    if not _idor_check_student(student):
-        return error_response("Access forbidden.", status_code=403)
-    return success_response(student.to_dict())
-
-
-@students_bp.route("/<int:student_id>", methods=["PUT"])
-@login_required
-@role_required("admin", "student")
-@handle_api_exceptions
-def update_student(student_id: int):
-    """PUT /api/students/<id> — Admin or own student (limited)."""
+def manage_student(student_id: int):
+    """GET/PUT/DELETE /api/students/<id>"""
     student = _get_student_or_404(student_id)
     if not student:
         return error_response("Student not found.", status_code=404)
 
-    # RBAC: Student can only edit their own profile
-    is_admin = current_user.role == RoleEnum.admin
-    if not is_admin:
-        if not current_user.student_profile or current_user.student_profile.id != student_id:
+    if request.method == "GET":
+        if not _idor_check_student(student):
             return error_response("Access forbidden.", status_code=403)
+        return success_response(student.to_dict())
 
-    data = request.get_json(silent=True) or {}
+    # PUT and DELETE
+    is_admin = current_user.role == RoleEnum.admin
 
-    from app.api.validators import validate_payload
-    schema = {
-        "full_name": {"type": str, "required": False, "max_length": 100},
-        "dept": {"type": str, "required": False, "max_length": 50},
-        "year": {"type": int, "required": False, "min_val": 1, "max_val": 4},
-        "section": {"type": str, "required": False, "max_length": 10},
-        "phone": {"type": str, "required": False, "min_length": 7, "max_length": 15, "regex": r"^[0-9+\-\s]+$"}
-    }
-    cleaned_data, err_resp = validate_payload(data, schema)
-    if err_resp:
-        return err_resp
+    if request.method == "PUT":
+        # RBAC: Student can only edit their own profile
+        if not is_admin:
+            if not current_user.student_profile or current_user.student_profile.id != student_id:
+                return error_response("Access forbidden.", status_code=403)
 
-    # Academic fields (Admin only)
-    if is_admin:
-        if "year" in cleaned_data and cleaned_data["year"] is not None:
-            student.year = cleaned_data["year"]
-        
-        updatable = ("full_name", "dept", "section")
-        for field in updatable:
-            if field in cleaned_data and cleaned_data[field] is not None:
-                setattr(student, field, cleaned_data[field])
+        data = request.get_json(silent=True) or {}
 
-    # Phone is updatable by both admin and student
-    if "phone" in cleaned_data:
-        student.phone = cleaned_data["phone"]
+        from app.api.validators import validate_payload
+        schema = {
+            "full_name": {"type": str, "required": False, "max_length": 100},
+            "dept": {"type": str, "required": False, "max_length": 50},
+            "year": {"type": int, "required": False, "min_val": 1, "max_val": 4},
+            "section": {"type": str, "required": False, "max_length": 10},
+            "phone": {"type": str, "required": False, "min_length": 7, "max_length": 15, "regex": r"^[0-9+\-\s]+$"}
+        }
+        cleaned_data, err_resp = validate_payload(data, schema)
+        if err_resp:
+            return err_resp
 
-    db.session.commit()
-    return success_response(student.to_dict())
+        # Academic fields (Admin only)
+        if is_admin:
+            if "year" in cleaned_data and cleaned_data["year"] is not None:
+                student.year = cleaned_data["year"]
+            
+            updatable = ("full_name", "dept", "section")
+            for field in updatable:
+                if field in cleaned_data and cleaned_data[field] is not None:
+                    setattr(student, field, cleaned_data[field])
 
+        # Phone is updatable by both admin and student
+        if "phone" in cleaned_data:
+            student.phone = cleaned_data["phone"]
 
-@students_bp.route("/<int:student_id>", methods=["DELETE"])
-@login_required
-@role_required("admin")
-@handle_api_exceptions
-def delete_student(student_id: int):
-    """DELETE /api/students/<id> — Admin only.
+        log = ActivityLog(
+            action="edit",
+            description=f"Updated student record for {student.full_name} ({student.roll_no})",
+            performed_by=current_user.id,
+            role=current_user.role.value
+        )
+        db.session.add(log)
+        db.session.commit()
+        return success_response(student.to_dict())
 
-    Deletes the User account, which cascades to the Student profile
-    (and all linked Enrollments, Attendance, and Marks via FK CASCADE).
-    Deleting only the Student row was a security bug — it left the
-    User account intact, allowing the deleted student to still log in.
-    """
-    student = _get_student_or_404(student_id)
-    if not student:
-        return error_response("Student not found.", status_code=404)
-    # Delete the parent User account; SQLAlchemy cascade removes the Student profile.
+    # DELETE
+    if not is_admin:
+        return error_response("Admin access required.", status_code=403)
+
+    full_name = student.full_name
+    roll_no = student.roll_no
+
     user = student.user
     if user:
         db.session.delete(user)
     else:
-        db.session.delete(student)  # fallback: orphaned profile with no User
+        db.session.delete(student)
+        
+    log = ActivityLog(
+        action="trash-2",
+        description=f"Deleted student record for {full_name} ({roll_no})",
+        performed_by=current_user.id,
+        role=current_user.role.value
+    )
+    db.session.add(log)
     db.session.commit()
     return success_response(message="Student deleted.")
 

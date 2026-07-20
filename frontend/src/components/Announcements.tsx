@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Pin, Search, Pencil, Trash2, X, Loader2, Megaphone } from 'lucide-react'
 import { announcementsApi, Announcement as Ann } from '../api/announcements'
 import { useToast } from '../contexts/ToastContext'

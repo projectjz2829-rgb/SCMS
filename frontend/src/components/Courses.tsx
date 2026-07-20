@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Search, Plus, Eye, Pencil, Trash2, X, Users, BookOpen, Filter, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, Eye, Pencil, Trash2, X, Users, BookOpen, Filter, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { coursesApi, Course } from '../api/courses'
 import { facultyApi, Faculty } from '../api/faculty'
 import { useToast } from '../contexts/ToastContext'
 import { EmptyState } from './ui/EmptyState'
 import { SkeletonTable } from './ui/Skeleton'
 import { useDebounce } from '../hooks/useDebounce'
+import { DEPARTMENTS } from '../utils/departments'
 
-const departments = ['Computer Science', 'Electrical Engineering', 'Mechanical Engineering', 'Civil Engineering', 'Business Administration']
 const semesters = [1, 2, 3, 4, 5, 6, 7, 8]
 
 const deptColors: Record<string, [string, string]> = {
@@ -42,22 +42,26 @@ function Modal({ title, course, facultyList, onClose, onSave }: { title: string;
             <label className="block text-xs font-medium text-slate-600 mb-1">Department</label>
             <select value={form.dept || ''} onChange={e => set('dept', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50">
-              {departments.map(d => <option key={d}>{d}</option>)}
+              {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Semester</label>
             <select value={form.semester || 1} onChange={e => set('semester', Number(e.target.value))}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50">
-              {semesters.map(s => <option key={s}>Semester {s}</option>)}
+              {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Faculty</label>
             <select value={form.faculty_id || ''} onChange={e => set('faculty_id', Number(e.target.value))}
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50">
-              <option value="">Select Faculty</option>
-              {facultyList.map(f => <option key={f.id} value={f.id}>{f.full_name}</option>)}
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50"
+              disabled={!form.dept || facultyList.filter(f => f.dept === form.dept).length === 0}
+            >
+              <option value="">
+                {!form.dept ? 'Select Department First' : facultyList.filter(f => f.dept === form.dept).length === 0 ? 'No faculty available for this department' : 'Select Faculty'}
+              </option>
+              {facultyList.filter(f => f.dept === form.dept).map(f => <option key={f.id} value={f.id}>{f.full_name}</option>)}
             </select>
           </div>
         </div>
@@ -90,22 +94,31 @@ export default function Courses() {
   const [editModal, setEditModal] = useState<{ open: boolean; course: Partial<Course> | null; isNew: boolean }>({ open: false, course: null, isNew: false })
   const [viewCourse, setViewCourse] = useState<Course | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [loading, setLoading] = useState(true)
   const { success, error } = useToast()
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const PER_PAGE = 8
 
-  const loadData = async () => {
-    setLoading(true)
+  const loadData = async (initialLoad = true) => {
+    if (initialLoad) setLoading(true)
     try {
       const [coursesRes, facultyRes] = await Promise.all([
-        coursesApi.getAll(),
+        coursesApi.getAll({
+          search: debouncedSearch,
+          dept: deptFilter,
+          semester: semFilter,
+          page,
+          limit: PER_PAGE
+        }),
         facultyApi.getAll()
       ])
-      setData(coursesRes)
-      setFacultyList(facultyRes)
+      setData(coursesRes.data)
+      setTotalPages(coursesRes.meta?.pages || 1)
+      setTotalItems(coursesRes.meta?.total || coursesRes.data.length)
+      setFacultyList(facultyRes.data || facultyRes)
     } catch (e) {
       error('Failed to load data')
     } finally {
@@ -113,27 +126,43 @@ export default function Courses() {
     }
   }
 
-  const filtered = useMemo(() => {
-    return data.filter(c =>
-      (!debouncedSearch || c.name.toLowerCase().includes(debouncedSearch.toLowerCase()) || c.code.toLowerCase().includes(debouncedSearch.toLowerCase())) &&
-      (!deptFilter || c.dept === deptFilter) &&
-      (!semFilter || c.semester === Number(semFilter))
-    )
-  }, [data, debouncedSearch, deptFilter, semFilter])
+  useEffect(() => {
+    loadData()
+  }, [debouncedSearch, deptFilter, semFilter, page])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, deptFilter, semFilter])
 
   const handleSave = async (form: Partial<Course>) => {
     try {
       if (editModal.isNew) {
-        await coursesApi.create(form)
+        const payload: Record<string, any> = {
+          name: form.name || '',
+          code: form.code || '',
+          dept: form.dept || '',
+          semester: Number(form.semester) || 1,
+        }
+        if (form.faculty_id) payload.faculty_id = Number(form.faculty_id)
+        await coursesApi.create(payload)
         success('Course created')
       } else {
-        if (form.id) await coursesApi.update(form.id, form)
+        if (form.id) {
+          const updatePayload: Record<string, any> = {
+            name: form.name,
+            dept: form.dept,
+            semester: form.semester ? Number(form.semester) : undefined,
+            faculty_id: form.faculty_id ? Number(form.faculty_id) : undefined
+          }
+          await coursesApi.update(form.id, updatePayload)
+        }
         success('Course updated')
       }
       setEditModal({ open: false, course: null, isNew: false })
       loadData()
-    } catch (e) {
-      error('Failed to save course')
+    } catch (e: any) {
+      const msg = e.response?.data?.message || 'Failed to save course';
+      error(msg);
     }
   }
 
@@ -142,9 +171,9 @@ export default function Courses() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Courses</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{data.length} courses offered</p>
+          <p className="text-slate-500 text-sm mt-0.5">{totalItems} courses offered</p>
         </div>
-        <button onClick={() => setEditModal({ open: true, course: { dept: departments[0], semester: 1 }, isNew: true })}
+        <button onClick={() => setEditModal({ open: true, course: { dept: DEPARTMENTS[0], semester: 1 }, isNew: true })}
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
           style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)', boxShadow: '0 2px 8px rgba(34,197,94,0.3)' }}>
           <Plus className="w-4 h-4" /> Add Course
@@ -162,7 +191,7 @@ export default function Courses() {
         <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
           className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
           <option value="">Department: All</option>
-          {departments.map(d => <option key={d}>{d}</option>)}
+          {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
         </select>
         <select value={semFilter} onChange={e => setSemFilter(e.target.value)}
           className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
@@ -189,7 +218,7 @@ export default function Courses() {
                     <SkeletonTable rows={5} cols={8} />
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-4">
                     <EmptyState 
@@ -199,7 +228,7 @@ export default function Courses() {
                     />
                   </td>
                 </tr>
-              ) : filtered.map(c => {
+              ) : data.map(c => {
                 const [bg, fg] = deptColors[c.dept] || ['#F8FAFC', '#64748B']
                 return (
                   <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group">
@@ -237,6 +266,30 @@ export default function Courses() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {!loading && data.length > 0 && (
+          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-xs text-slate-500">Showing {Math.min((page - 1) * PER_PAGE + 1, totalItems)}–{Math.min(page * PER_PAGE, totalItems)} of {totalItems}</p>
+            <div className="flex items-center gap-1">
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => setPage(p)}
+                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${p === page ? 'text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                  style={p === page ? { background: '#2563EB' } : {}}>
+                  {p}
+                </button>
+              ))}
+              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {editModal.open && editModal.course && (

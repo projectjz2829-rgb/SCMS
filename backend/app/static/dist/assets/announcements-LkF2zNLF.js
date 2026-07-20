@@ -1,1 +1,0 @@
-import{s as e}from"./index-D7S4Q61n.js";var t={getAll:async()=>{let{data:t}=await e.get(`/api/announcements/`);return t.data},create:async t=>{let{data:n}=await e.post(`/api/announcements/`,t);return n.data},update:async(t,n)=>{let{data:r}=await e.put(`/api/announcements/${t}`,n);return r.data},delete:async t=>{await e.delete(`/api/announcements/${t}`)}};export{t};

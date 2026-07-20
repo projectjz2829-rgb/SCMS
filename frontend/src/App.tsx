@@ -18,6 +18,8 @@ const Attendance = lazy(() => import('./components/Attendance'));
 const Marks = lazy(() => import('./components/Marks'));
 const Profile = lazy(() => import('./components/Profile'));
 const Settings = lazy(() => import('./components/Settings'));
+const Reports = lazy(() => import('./components/Reports'));
+const Transcript = lazy(() => import('./components/Transcript'));
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles?: string[] }) => {
   const { isAuthenticated, isLoading, role } = useAuth();
@@ -69,6 +71,9 @@ export default function App() {
                   <Route path="marks" element={<ProtectedRoute><Marks /></ProtectedRoute>} />
                   <Route path="announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
                   <Route path="activity" element={<ProtectedRoute allowedRoles={['admin']}><Activity /></ProtectedRoute>} />
+                  
+                  <Route path="reports" element={<ProtectedRoute allowedRoles={['admin', 'faculty']}><Reports /></ProtectedRoute>} />
+                  <Route path="reports/transcript/:id" element={<ProtectedRoute><Transcript /></ProtectedRoute>} />
                   
                   <Route path="profile" element={<ProtectedRoute><Profile role="student" /></ProtectedRoute>} />
                   <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

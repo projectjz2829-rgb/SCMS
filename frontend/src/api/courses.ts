@@ -12,9 +12,9 @@ export interface Course {
 }
 
 export const coursesApi = {
-  getAll: async (params?: any): Promise<Course[]> => {
+  getAll: async (params?: any): Promise<{ data: Course[], meta?: any }> => {
     const { data } = await api.get('/api/courses/', { params });
-    return data.data;
+    return { data: data.data, meta: data.meta };
   },
   getById: async (id: number): Promise<Course> => {
     const { data } = await api.get(`/api/courses/${id}`);
@@ -25,7 +25,12 @@ export const coursesApi = {
     return data.data;
   },
   update: async (id: number, course: Partial<Course>): Promise<Course> => {
-    const { data } = await api.put(`/api/courses/${id}`, course);
+    const payload: any = {}
+    if (course.name !== undefined) payload.name = course.name
+    if (course.dept !== undefined) payload.dept = course.dept
+    if (course.semester !== undefined) payload.semester = Number(course.semester)
+    if (course.faculty_id !== undefined) payload.faculty_id = course.faculty_id ? Number(course.faculty_id) : null
+    const { data } = await api.put(`/api/courses/${id}`, payload);
     return data.data;
   },
   delete: async (id: number): Promise<void> => {

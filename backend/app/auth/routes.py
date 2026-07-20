@@ -29,6 +29,18 @@ from .forms import LoginForm, RegisterForm
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+def _serve_react_app():
+    """Serve the React SPA entry point with CSRF token instead of legacy Jinja HTML."""
+    from flask import current_app, make_response, send_from_directory
+    from flask_wtf.csrf import generate_csrf
+    import os
+    dist_dir = os.path.join(current_app.root_path, "static", "dist")
+    response = make_response(send_from_directory(dist_dir, "index.html"))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.set_cookie("csrf_token", generate_csrf(), httponly=False, samesite="Lax")
+    return response
+
+
 
 # --------------------------------------------------------------------------- #
 #  Session Expiration (Inactivity and Absolute Timeout)                         #
@@ -81,7 +93,7 @@ def login():
     if current_user.is_authenticated:
         if request.is_json:
             return success_response({"role": current_user.role.value}, message="Already authenticated")
-        return _redirect_by_role(current_user)
+        return _serve_react_app()
 
     ident = None
     password = None
@@ -122,8 +134,14 @@ def login():
 
         # Authenticate — do not reveal which field was wrong
         if user and user.is_active and user.check_password(password):
+            # Preserve the CSRF token before clearing the session
+            csrf_token = session.get('csrf_token')
+
             # Prevent session fixation by clearing existing session data before authenticating
             session.clear()
+
+            if csrf_token:
+                session['csrf_token'] = csrf_token
             
             login_user(user, remember=False)
             
@@ -144,7 +162,7 @@ def login():
             parsed = urlparse(next_page)
             if next_page and not parsed.scheme and not parsed.netloc:
                 return redirect(next_page)
-            return _redirect_by_role(user)
+            return _serve_react_app()
 
         if request.is_json:
             return error_response("Invalid credentials. Please try again.", status_code=401)
@@ -153,7 +171,10 @@ def login():
     if request.is_json:
         return error_response("Identifier and password are required.", status_code=400)
         
-    return render_template("auth/login.html", form=form, title="Sign In")
+    if request.method == "GET":
+        return _serve_react_app()
+        
+    return _serve_react_app()
 
 
 # --------------------------------------------------------------------------- #
@@ -198,25 +219,25 @@ def register():
         # Duplicate email check
         if User.query.filter_by(email=email).first():
             flash("An account with that email already exists.", "danger")
-            return render_template("auth/register.html", form=form, title="Register User")
+            return _serve_react_app()
 
         try:
             role_enum = RoleEnum[form.role.data]
         except KeyError:
             flash("Invalid role selected.", "danger")
-            return render_template("auth/register.html", form=form, title="Register User")
+            return _serve_react_app()
 
         # Preemptive duplicate checks for profile unique keys
         if role_enum == RoleEnum.student:
             roll_no = (form.roll_no.data or '').strip()
             if Student.query.filter_by(roll_no=roll_no).first():
                 flash("That roll number is already in use.", "danger")
-                return render_template("auth/register.html", form=form, title="Register User")
+                return _serve_react_app()
         elif role_enum == RoleEnum.faculty:
             emp_id = (form.emp_id.data or '').strip()
             if Faculty.query.filter_by(emp_id=emp_id).first():
                 flash("That employee ID is already in use.", "danger")
-                return render_template("auth/register.html", form=form, title="Register User")
+                return _serve_react_app()
 
         try:
             user = User(email=email, role=role_enum, is_active=True)
@@ -250,7 +271,7 @@ def register():
         except IntegrityError:
             db.session.rollback()
             flash("That email, roll number, or employee ID is already in use.", "danger")
-            return render_template("auth/register.html", form=form, title="Register User")
+            return _serve_react_app()
 
         flash(f"Account created for {email}.", "success")
         return redirect(url_for("dashboard.admin_dashboard"))
@@ -263,7 +284,10 @@ def register():
     if errors:
         flash("Please fix the following errors: " + " | ".join(errors), "danger")
 
-    return render_template("auth/register.html", form=form, title="Register User")
+    if request.method == "GET":
+        return _serve_react_app()
+
+    return _serve_react_app()
 
 
 # --------------------------------------------------------------------------- #

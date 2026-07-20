@@ -18,10 +18,10 @@ class ActivityLog(db.Model):
     def to_dict(self) -> dict:
         return {
             "id": self.id,
-            "action": self.action,
+            "icon": self.action,  # The frontend expects 'icon' which maps to an icon string like 'edit'
             "description": self.description,
             "performed_by": self.performed_by,
             "role": self.role,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
-            "user_email": self.user.email if self.user else "System"
+            "actor": self.user.email if self.user else "System"  # The frontend expects 'actor'
         }

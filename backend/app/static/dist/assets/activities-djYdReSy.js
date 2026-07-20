@@ -1,1 +1,0 @@
-import{s as e}from"./index-D7S4Q61n.js";var t={getAll:async(t=50)=>{let{data:n}=await e.get(`/api/activities/`,{params:{limit:t}});return n.data}};export{t};

@@ -65,6 +65,8 @@ def create_app(config_name: str = "default") -> Flask:
             Marks,
             Announcement,
             ActivityLog,
+            UserSettings,
+            AnnouncementRead,
         )
 
         # ------------------------------------------------------------------ #
@@ -77,14 +79,15 @@ def create_app(config_name: str = "default") -> Flask:
             return jsonify({"status": "ok"}), 200
 
         # ------------------------------------------------------------------ #
+        # auth_bp handles POST JSON login/logout and session management
         from app.auth import auth_bp
         app.register_blueprint(auth_bp)
 
         from app.api import register_api_blueprints
         register_api_blueprints(app)
 
-        from app.dashboard import dashboard_bp
-        app.register_blueprint(dashboard_bp)
+        # from app.dashboard import dashboard_bp
+        # app.register_blueprint(dashboard_bp)
 
         # ------------------------------------------------------------------ #
         #  SPA Catch-all                                                       #
@@ -95,6 +98,7 @@ def create_app(config_name: str = "default") -> Flask:
 
         @app.route("/", defaults={"path": ""})
         @app.route("/<path:path>")
+        @limiter.exempt
         def serve_spa(path):
             if path.startswith("api/") or path.startswith("auth/"):
                 return jsonify({"error": "Not found"}), 404
@@ -104,6 +108,7 @@ def create_app(config_name: str = "default") -> Flask:
                 return send_from_directory(dist_dir, path)
                 
             response = make_response(send_from_directory(dist_dir, "index.html"))
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.set_cookie("csrf_token", generate_csrf(), httponly=False, samesite="Lax")
             return response
 

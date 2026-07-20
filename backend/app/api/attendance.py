@@ -140,12 +140,18 @@ def mark_attendance():
 
 # ─────────────────────────── get by course ──────────────────────────────── #
 
-@attendance_bp.route("/<int:course_id>", methods=["GET"])
+@attendance_bp.route("/", methods=["GET"])
 @login_required
 @role_required("faculty", "admin")
 @handle_api_exceptions
-def get_attendance_by_course(course_id: int):
-    """GET /api/attendance/<course_id> — Faculty/Admin."""
+def get_attendance():
+    """GET /api/attendance/ — Faculty/Admin."""
+    course_id = request.args.get("course_id", type=int)
+    date_str = request.args.get("date")
+    
+    if not course_id:
+        return error_response("course_id query parameter is required.", status_code=400)
+        
     course = db.session.get(Course, course_id)
     if not course:
         return error_response("Course not found.", status_code=404)
@@ -154,12 +160,35 @@ def get_attendance_by_course(course_id: int):
     if access_err:
         return access_err
 
-    records = (
-        Attendance.query.filter_by(course_id=course_id)
-        .order_by(Attendance.date.desc())
-        .all()
-    )
+    query = Attendance.query.filter_by(course_id=course_id)
+    if date_str:
+        try:
+            attendance_date = date_type.fromisoformat(date_str)
+            query = query.filter_by(date=attendance_date)
+        except ValueError:
+            return error_response("Invalid date format. Use YYYY-MM-DD.", status_code=400)
+
+    records = query.order_by(Attendance.date.desc()).all()
     return success_response([r.to_dict() for r in records])
+
+# ─────────────────────────── get by id ────────────────────────────────────── #
+
+@attendance_bp.route("/<int:att_id>", methods=["GET"])
+@login_required
+@role_required("faculty", "admin")
+@handle_api_exceptions
+def get_attendance_by_id(att_id: int):
+    """GET /api/attendance/<id>"""
+    record = db.session.get(Attendance, att_id)
+    if not record:
+        return error_response("Attendance record not found.", status_code=404)
+        
+    course = db.session.get(Course, record.course_id)
+    access_err = verify_faculty_course_access(course)
+    if access_err:
+        return access_err
+        
+    return success_response(record.to_dict())
 
 
 # ─────────────────────────── get by student ─────────────────────────────── #
@@ -263,3 +292,25 @@ def update_attendance(att_id: int):
 
     db.session.commit()
     return success_response(record.to_dict())
+
+
+# ─────────────────────────── delete ─────────────────────────────────────── #
+
+@attendance_bp.route("/<int:att_id>", methods=["DELETE"])
+@login_required
+@role_required("admin", "faculty")
+@handle_api_exceptions
+def delete_attendance(att_id: int):
+    """DELETE /api/attendance/<id> — Faculty who marked or admin."""
+    record = db.session.get(Attendance, att_id)
+    if not record:
+        return error_response("Attendance record not found.", status_code=404)
+
+    if current_user.role == RoleEnum.faculty:
+        if not current_user.faculty_profile or record.marked_by != current_user.faculty_profile.id:
+            return error_response("You did not mark this record.", status_code=403)
+
+    db.session.delete(record)
+    db.session.commit()
+    return success_response(message="Attendance record deleted.")
+
