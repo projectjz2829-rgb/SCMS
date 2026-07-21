@@ -2,9 +2,9 @@ services:
   - type: web
     name: scms-backend
     env: python
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: bash start.sh
+    rootDir: .
+    buildCommand: bash build.sh
+    startCommand: cd backend && bash start.sh
     healthCheckPath: /health
     envVars:
       - key: FLASK_APP

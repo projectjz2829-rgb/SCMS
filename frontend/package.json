@@ -1,5 +1,6 @@
 {
-  "name": "figma-make-app",
+  "name": "scms",
+  "description": "Student Campus Management System frontend application",
   "private": true,
   "version": "1.0.0",
   "type": "module",

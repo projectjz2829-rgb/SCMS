@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150x150/2563EB/ffffff?text=SCMS" alt="SCMS Logo" width="150" height="150" />
   <h1>Student Campus Management System (SCMS)</h1>
   <p>A modern, full-stack campus administration portal built for speed, security, and scale.</p>
 
@@ -119,13 +118,7 @@ If seeded with standard development data, the following credentials provide acce
 
 ## 📸 Screenshots
 
-| Admin Dashboard | Student Transcript |
-|:---:|:---:|
-| ![Admin Dashboard Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Admin+Dashboard) | ![Transcript Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Printable+Transcript) |
-
-| Course Management | Grade Analytics |
-|:---:|:---:|
-| ![Course View Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Course+Manager) | ![Analytics Placeholder](https://via.placeholder.com/400x250/f8fafc/94a3b8?text=Marks+%26+GPA) |
+*(Screenshots will be added in a future release)*
 
 ---
 
