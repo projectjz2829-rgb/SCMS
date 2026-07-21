@@ -13,5 +13,13 @@ activities_bp = Blueprint("activities", __name__)
 @handle_api_exceptions
 def get_activities():
     limit = request.args.get("limit", 50, type=int)
-    logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(limit).all()
-    return success_response([log.to_dict() for log in logs])
+    try:
+        logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(limit).all()
+        return success_response([log.to_dict() for log in logs])
+    except (db.exc.ProgrammingError, db.exc.OperationalError) as e:
+        if "relation" in str(e) or "UndefinedTable" in str(e) or "does not exist" in str(e):
+            import logging
+            logging.getLogger(__name__).warning("ActivityLog table missing. Returning empty array.")
+            db.session.rollback()
+            return success_response([])
+        raise

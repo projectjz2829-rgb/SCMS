@@ -23,19 +23,26 @@ def _log_activity(action, desc):
 @handle_api_exceptions
 def manage_announcements():
     if request.method == "GET":
-        query = Announcement.query
-        if current_user.role.value != "admin":
-            query = query.filter_by(active=True)
-            # Handle expiry client side or here
-        
-        announcements = query.order_by(Announcement.pinned.desc(), Announcement.created_at.desc()).all()
-        
-        # Filter out expired for non-admins
-        if current_user.role.value != "admin":
-            now = datetime.now(timezone.utc)
-            announcements = [a for a in announcements if not a.expiry_date or a.expiry_date > now]
+        try:
+            query = Announcement.query
+            if current_user.role.value != "admin":
+                query = query.filter_by(active=True)
             
-        return success_response([a.to_dict() for a in announcements])
+            announcements = query.order_by(Announcement.pinned.desc(), Announcement.created_at.desc()).all()
+            
+            # Filter out expired for non-admins
+            if current_user.role.value != "admin":
+                now = datetime.now(timezone.utc)
+                announcements = [a for a in announcements if not a.expiry_date or a.expiry_date > now]
+                
+            return success_response([a.to_dict() for a in announcements])
+        except (db.exc.ProgrammingError, db.exc.OperationalError) as e:
+            if "relation" in str(e) or "UndefinedTable" in str(e) or "does not exist" in str(e):
+                import logging
+                logging.getLogger(__name__).warning("Announcements table missing. Returning empty array.")
+                db.session.rollback()
+                return success_response([])
+            raise
 
     # POST
     if current_user.role.value != "admin":

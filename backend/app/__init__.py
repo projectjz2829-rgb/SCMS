@@ -224,9 +224,4 @@ def create_app(config_name: str = "default") -> Flask:
             app.logger.setLevel(logging.WARNING)
             app.logger.warning("SCMS startup initialised successfully")
 
-        # Auto-create tables in dev/test only.
-        # Production uses `flask db upgrade` via wsgi.py.
-        if app.config.get("TESTING") or app.config.get("DEBUG"):
-            db.create_all()
-
     return app
