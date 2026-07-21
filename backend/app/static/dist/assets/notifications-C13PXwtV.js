@@ -1,0 +1,1 @@
+import{s as e}from"./index-DzGPRz9A.js";var t={getUnread:async()=>{let{data:t}=await e.get(`/api/notifications/`);return t.data},markAllRead:async()=>{await e.post(`/api/notifications/read-all`)},markRead:async t=>{await e.post(`/api/notifications/${t}/read`)}};export{t};

@@ -1,0 +1,1 @@
+var e=e=>{if(!e)return`-`;let t=new Date(e);return Number.isNaN(t.getTime())?`-`:t.toLocaleDateString()},t=(e,t)=>{if(!e)return`-`;let n=new Date(e);return Number.isNaN(n.getTime())?`-`:t?n.toLocaleString(`en-US`,t):n.toLocaleString()};export{t as n,e as t};
