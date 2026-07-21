@@ -2,15 +2,13 @@ services:
   - type: web
     name: scms-backend
     env: python
-    rootDir: .
-    buildCommand: bash build.sh
-    startCommand: cd backend && bash start.sh
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
     healthCheckPath: /health
     envVars:
       - key: FLASK_APP
         value: wsgi:app
-      - key: NODE_VERSION
-        value: "22"
       - key: PYTHON_VERSION
         value: "3.12.0"
       - key: FLASK_ENV

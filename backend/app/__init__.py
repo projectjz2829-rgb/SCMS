@@ -5,6 +5,12 @@ Follows the Flask Application Factory pattern to support multiple configs
 (development, testing, production) and avoid circular imports.
 """
 import os
+import mimetypes
+
+# Fix for minimal environments like Render that might lack /etc/mime.types
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('image/svg+xml', '.svg')
 
 from dotenv import load_dotenv
 from flask import Flask, render_template, jsonify
