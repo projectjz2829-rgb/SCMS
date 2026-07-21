@@ -150,8 +150,8 @@ export default function Marks() {
       </div>
 
       {/* Course selector */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-wrap gap-4 items-end">
-        <div className="flex-1 min-w-52">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end">
+        <div className="w-full md:flex-1 md:w-auto">
           <label className="block text-xs font-medium text-slate-600 mb-1.5">Course</label>
           <div className="relative">
             <select value={selectedCourse || ''} onChange={e => setSelectedCourse(Number(e.target.value))}
@@ -161,11 +161,11 @@ export default function Marks() {
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="w-full md:w-auto flex flex-wrap md:flex-nowrap items-center gap-2 sm:gap-3">
           {[['Int-1', '20'], ['Int-2', '20'], ['Semester', '50'], ['Practical', '25'], ['Total', '115']].map(([label, max]) => (
-            <div key={label} className="text-center px-3 py-2 rounded-xl bg-slate-50 border border-slate-100">
-              <p className="text-xs font-semibold text-slate-700">{label}</p>
-              <p className="text-xs text-slate-400">Max: {max}</p>
+            <div key={label} className="flex-1 md:flex-none text-center px-2 sm:px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 min-w-[60px]">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-700">{label}</p>
+              <p className="text-[10px] sm:text-xs text-slate-400">Max: {max}</p>
             </div>
           ))}
         </div>
@@ -266,7 +266,7 @@ export default function Marks() {
       {/* Save */}
       <div className="flex justify-end">
         <button onClick={handleSave} disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
           style={{ background: saved ? 'linear-gradient(135deg, #22C55E, #16A34A)' : 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>
           {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
             : saved ? <><CheckCircle className="w-4 h-4" /> Marks Saved!</>

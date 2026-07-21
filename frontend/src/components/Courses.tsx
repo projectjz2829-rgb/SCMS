@@ -25,34 +25,34 @@ function Modal({ title, course, facultyList, onClose, onSave }: { title: string;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[95vw] md:w-full md:max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
         </div>
-        <div className="p-6 grid grid-cols-2 gap-4">
+        <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           {[{ label: 'Course Code', key: 'code' }, { label: 'Course Name', key: 'name' }].map(({ label, key }) => (
-            <div key={key} className="col-span-2 sm:col-span-1">
+            <div key={key} className="col-span-1">
               <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
               <input value={(form as Record<string, string | number>)[key] as string || ''} onChange={e => set(key as keyof Course, e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50" />
             </div>
           ))}
-          <div>
+          <div className="col-span-1">
             <label className="block text-xs font-medium text-slate-600 mb-1">Department</label>
             <select value={form.dept || ''} onChange={e => set('dept', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50">
               {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
             </select>
           </div>
-          <div>
+          <div className="col-span-1">
             <label className="block text-xs font-medium text-slate-600 mb-1">Semester</label>
             <select value={form.semester || 1} onChange={e => set('semester', Number(e.target.value))}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50">
               {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
             </select>
           </div>
-          <div>
+          <div className="col-span-1 md:col-span-2">
             <label className="block text-xs font-medium text-slate-600 mb-1">Faculty</label>
             <select value={form.faculty_id || ''} onChange={e => set('faculty_id', Number(e.target.value))}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50"
@@ -65,8 +65,8 @@ function Modal({ title, course, facultyList, onClose, onSave }: { title: string;
             </select>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
+        <div className="px-4 md:px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2">
+          <button onClick={onClose} className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
           <button 
             disabled={saving}
             onClick={async () => {
@@ -74,7 +74,7 @@ function Modal({ title, course, facultyList, onClose, onSave }: { title: string;
               await onSave(form)
               setSaving(false)
             }} 
-            className="px-4 py-2 text-sm font-medium text-white rounded-xl flex items-center gap-2 disabled:opacity-50" 
+            className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white rounded-xl flex items-center justify-center gap-2 disabled:opacity-50" 
             style={{ background: '#22C55E' }}>
             {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : 'Save Course'}
           </button>
@@ -181,23 +181,27 @@ export default function Courses() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-48">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col md:flex-row flex-wrap gap-3 items-center">
+        <div className="relative w-full md:w-auto md:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses..."
             className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none" />
         </div>
-        <Filter className="w-4 h-4 text-slate-400" />
-        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
-          <option value="">Department: All</option>
-          {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
-        </select>
-        <select value={semFilter} onChange={e => setSemFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
-          <option value="">Semester: All</option>
-          {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
-        </select>
+        <div className="hidden md:block">
+          <Filter className="w-4 h-4 text-slate-400" />
+        </div>
+        <div className="w-full md:w-auto grid grid-cols-1 sm:grid-cols-2 md:flex gap-3">
+          <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
+            <option value="">Department: All</option>
+            {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
+          </select>
+          <select value={semFilter} onChange={e => setSemFilter(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-700">
+            <option value="">Semester: All</option>
+            {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -299,7 +303,7 @@ export default function Courses() {
 
       {viewCourse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => setViewCourse(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-[95vw] md:w-full md:max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-slate-900">Course Details</h2>
               <button onClick={() => setViewCourse(null)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>

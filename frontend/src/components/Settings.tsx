@@ -75,10 +75,10 @@ export default function Settings() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex flex-wrap sm:flex-nowrap gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit">
         {tabs.map(tab => (
           <button key={tab} type="button" onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-150 ${
+            className={`flex-1 sm:flex-none px-3 sm:px-5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-150 ${
               activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}>
             {tab}
@@ -90,7 +90,7 @@ export default function Settings() {
       {activeTab === 'Theme' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
           <h3 className="text-sm font-semibold text-slate-900">Appearance</h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {themeOptions.map(opt => (
               <button key={opt.value} type="button" onClick={() => setTheme(opt.value)}
                 className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all ${

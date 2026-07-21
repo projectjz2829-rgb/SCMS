@@ -106,28 +106,60 @@ export default function Layout() {
     navigate('/login')
   }
 
+  const closeSidebarMobile = () => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false)
+    }
+  }
+
+  // Effect to handle window resize for sidebar state
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true)
+      } else {
+        setSidebarOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    handleResize()
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   return (
     <div className="flex h-screen overflow-hidden bg-surface">
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
       {/* Sidebar */}
       <aside
-        className="sidebar-glass flex-shrink-0 flex flex-col transition-all duration-300 z-30"
-        style={{ width: sidebarOpen ? 240 : 72 }}
+        className={`sidebar-glass flex-shrink-0 flex flex-col transition-transform duration-300 z-50 fixed inset-y-0 left-0 lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ width: window.innerWidth >= 1024 ? (sidebarOpen ? 240 : 72) : 260 }}
       >
         {/* Brand */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10 flex-shrink-0">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>
             <GraduationCap className="w-4 h-4 text-white" />
           </div>
-          {sidebarOpen && (
-            <div className="overflow-hidden">
+          {(sidebarOpen || window.innerWidth < 1024) && (
+            <div className="overflow-hidden flex-1">
               <p className="text-white font-bold text-sm leading-tight">SCMS</p>
               <p className="text-slate-400 text-xs">Campus Portal</p>
             </div>
           )}
+          {/* Mobile close button */}
+          <button className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Role badge */}
-        {sidebarOpen && (
+        {(sidebarOpen || window.innerWidth < 1024) && (
           <div className="mx-3 mt-4 mb-2 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: roleColor[role] }}>
@@ -149,18 +181,19 @@ export default function Layout() {
               <Link
                 key={item.id}
                 to={item.path}
+                onClick={closeSidebarMobile}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
                   isActive
                     ? 'text-white'
                     : 'text-slate-400 hover:text-white hover:bg-white/8'
                 }`}
                 style={isActive ? { background: roleColor[role], boxShadow: `0 2px 8px ${roleColor[role]}40` } : {}}
-                title={!sidebarOpen ? item.label : undefined}
+                title={!sidebarOpen && window.innerWidth >= 1024 ? item.label : undefined}
               >
                 <span className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'}`}>
                   {item.icon}
                 </span>
-                {sidebarOpen && <span className="truncate">{item.label}</span>}
+                {(sidebarOpen || window.innerWidth < 1024) && <span className="truncate">{item.label}</span>}
               </Link>
             )
           })}
@@ -171,20 +204,20 @@ export default function Layout() {
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 text-sm font-medium transition-all duration-150"
-            title={!sidebarOpen ? 'Logout' : undefined}
+            title={!sidebarOpen && window.innerWidth >= 1024 ? 'Logout' : undefined}
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
-            {sidebarOpen && <span>Logout</span>}
+            {(sidebarOpen || window.innerWidth < 1024) && <span>Logout</span>}
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full lg:w-auto min-w-0">
         {/* Navbar */}
-        <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-100 flex items-center px-4 gap-4 flex-shrink-0 z-20">
+        <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-100 flex items-center px-4 gap-2 md:gap-4 flex-shrink-0 z-20">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-500 hover:text-slate-800 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {sidebarOpen && window.innerWidth >= 1024 ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
           {/* Search */}

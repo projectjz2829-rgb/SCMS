@@ -98,8 +98,8 @@ export default function Attendance() {
       </div>
 
       {/* Controls */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-wrap gap-4 items-end">
-        <div className="flex-1 min-w-52">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-end">
+        <div className="w-full md:flex-1 md:w-auto">
           <label className="block text-xs font-medium text-slate-600 mb-1.5">Course</label>
           <div className="relative">
             <select value={selectedCourse || ''} onChange={e => setSelectedCourse(Number(e.target.value))}
@@ -109,14 +109,14 @@ export default function Attendance() {
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           </div>
         </div>
-        <div>
+        <div className="w-full md:w-auto">
           <label className="block text-xs font-medium text-slate-600 mb-1.5">Date</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none text-slate-900" />
+            className="w-full md:w-auto px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none text-slate-900" />
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setAll('present')} className="px-3 py-2 text-xs font-semibold rounded-xl border transition-colors" style={{ borderColor: '#22C55E', color: '#22C55E', background: '#F0FDF4' }}>All Present</button>
-          <button onClick={() => setAll('absent')} className="px-3 py-2 text-xs font-semibold rounded-xl border transition-colors" style={{ borderColor: '#EF4444', color: '#EF4444', background: '#FEF2F2' }}>All Absent</button>
+        <div className="w-full md:w-auto flex items-center gap-2">
+          <button onClick={() => setAll('present')} className="flex-1 md:flex-none px-3 py-2 text-xs font-semibold rounded-xl border transition-colors" style={{ borderColor: '#22C55E', color: '#22C55E', background: '#F0FDF4' }}>All Present</button>
+          <button onClick={() => setAll('absent')} className="flex-1 md:flex-none px-3 py-2 text-xs font-semibold rounded-xl border transition-colors" style={{ borderColor: '#EF4444', color: '#EF4444', background: '#FEF2F2' }}>All Absent</button>
         </div>
       </div>
 
@@ -193,12 +193,12 @@ export default function Attendance() {
       </div>
 
       {/* Save button */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p className="text-sm text-slate-400 text-center sm:text-left">
           Marking attendance for <strong className="text-slate-700">{course?.code || ''}</strong> on <strong className="text-slate-700">{new Date(date + 'T00:00:00').toDateString()}</strong>
         </p>
         <button onClick={handleSave} disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-60"
           style={{ background: saved ? 'linear-gradient(135deg, #22C55E, #16A34A)' : 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>
           {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
             : saved ? <><CheckCircle className="w-4 h-4" /> Saved!</>

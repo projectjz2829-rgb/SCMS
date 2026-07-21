@@ -8,7 +8,7 @@ import { coursesApi, Course } from '../api/courses'
 import { announcementsApi, Announcement } from '../api/announcements'
 import { useAuth } from '../contexts/AuthContext'
 import { EmptyState } from './ui/EmptyState'
-import { BarChart as BarChartIcon, PieChart, Activity } from 'lucide-react'
+import { BarChart as BarChartIcon, PieChart } from 'lucide-react'
 import { formatDate } from '../utils/formatters'
 
 export default function FacultyDashboard() {
@@ -48,7 +48,7 @@ export default function FacultyDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {quickStats.map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <div className="flex items-start justify-between">

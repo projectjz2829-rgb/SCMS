@@ -11,7 +11,7 @@ export default function Transcript() {
   useEffect(() => {
     if (id) {
       reportsApi.getTranscript(Number(id)).then(res => {
-        setData(res)
+        setData(res.data)
         setLoading(false)
       }).catch(err => {
         console.error(err)
@@ -51,37 +51,37 @@ export default function Transcript() {
       </div>
 
       {/* Transcript Document */}
-      <div className="max-w-4xl mx-auto pt-24 pb-12 px-8 print:p-0">
+      <div className="max-w-4xl mx-auto pt-24 pb-12 px-4 sm:px-8 print:p-0">
         
         {/* Header */}
-        <div className="text-center mb-10 pb-6 border-b-2 border-slate-800">
-          <h1 className="text-3xl font-black uppercase tracking-wider text-slate-900">Official Transcript</h1>
-          <p className="text-sm font-medium text-slate-600 uppercase tracking-widest mt-2">SCMS Academic Record</p>
+        <div className="text-center mb-8 sm:mb-10 pb-6 border-b-2 border-slate-800">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-slate-900">Official Transcript</h1>
+          <p className="text-xs sm:text-sm font-medium text-slate-600 uppercase tracking-widest mt-2">SCMS Academic Record</p>
         </div>
 
         {/* Student Info */}
-        <div className="grid grid-cols-2 gap-8 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-10">
           <div className="space-y-3 text-sm">
             <div className="flex border-b border-slate-200 pb-2">
-              <span className="w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Student Name</span>
+              <span className="w-28 sm:w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Student Name</span>
               <span className="font-semibold text-slate-900">{data.student.name}</span>
             </div>
             <div className="flex border-b border-slate-200 pb-2">
-              <span className="w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Roll Number</span>
+              <span className="w-28 sm:w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Roll Number</span>
               <span className="font-semibold text-slate-900">{data.student.roll_no}</span>
             </div>
             <div className="flex border-b border-slate-200 pb-2">
-              <span className="w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Email</span>
-              <span className="font-semibold text-slate-900">{data.student.email}</span>
+              <span className="w-28 sm:w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Email</span>
+              <span className="font-semibold text-slate-900 break-all">{data.student.email}</span>
             </div>
           </div>
           <div className="space-y-3 text-sm">
             <div className="flex border-b border-slate-200 pb-2">
-              <span className="w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Department</span>
+              <span className="w-28 sm:w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Department</span>
               <span className="font-semibold text-slate-900">{data.student.dept}</span>
             </div>
             <div className="flex border-b border-slate-200 pb-2">
-              <span className="w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Year / Section</span>
+              <span className="w-28 sm:w-32 font-bold text-slate-600 uppercase text-xs tracking-wider">Year / Section</span>
               <span className="font-semibold text-slate-900">{data.student.year} / {data.student.section}</span>
             </div>
           </div>

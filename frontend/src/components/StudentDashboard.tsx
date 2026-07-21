@@ -47,7 +47,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {[
           { label: 'Enrolled Courses', value: myCourses.length, icon: <BookMarked className="w-5 h-5" />, color: '#2563EB', bg: '#EFF6FF' },
           { label: 'Avg. Attendance', value: `${avgAttendance}%`, icon: <CheckCircle className="w-5 h-5" />, color: '#22C55E', bg: '#F0FDF4' },

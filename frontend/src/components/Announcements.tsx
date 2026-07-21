@@ -34,7 +34,7 @@ function BroadcastModal({ ann, onClose, onSave }: { ann: Partial<Ann>; onClose: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[95vw] md:w-full md:max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#EFF6FF' }}>
@@ -44,7 +44,7 @@ function BroadcastModal({ ann, onClose, onSave }: { ann: Partial<Ann>; onClose: 
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-4 md:p-6 space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Title *</label>
             <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -55,7 +55,7 @@ function BroadcastModal({ ann, onClose, onSave }: { ann: Partial<Ann>; onClose: 
             <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
               rows={4} placeholder="Write your announcement..." className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none bg-slate-50 resize-none" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Priority</label>
               <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as any }))}
@@ -80,10 +80,10 @@ function BroadcastModal({ ann, onClose, onSave }: { ann: Partial<Ann>; onClose: 
             </label>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
+        <div className="px-4 md:px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2">
+          <button onClick={onClose} className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
           <button onClick={handleSend} disabled={loading || !form.title || !form.message}
-            className="px-5 py-2 text-sm font-semibold text-white rounded-xl flex items-center gap-2 disabled:opacity-50 hover:opacity-90 transition-opacity"
+            className="w-full sm:w-auto px-5 py-2 text-sm font-semibold text-white rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-opacity"
             style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }}>
             {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</> : (ann.id ? 'Save Changes' : 'Broadcast')}
           </button>

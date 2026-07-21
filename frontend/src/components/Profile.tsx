@@ -51,7 +51,7 @@ export default function Profile({ role }: Props) {
 
       {/* Avatar card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <div className="flex items-center gap-5">
+        <div className="flex flex-col sm:flex-row items-center gap-5">
           <div className="relative">
             <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
               style={{ background: `linear-gradient(135deg, ${base.color}, ${base.color}cc)` }}>
@@ -63,25 +63,25 @@ export default function Profile({ role }: Props) {
               </button>
             )}
           </div>
-          <div>
+          <div className="text-center sm:text-left">
             <h2 className="text-xl font-bold text-slate-900">{form.name}</h2>
             <p className="text-sm text-slate-500 mt-0.5">{form.email}</p>
             <span className="inline-flex mt-2 px-2.5 py-0.5 rounded-lg text-xs font-semibold text-white" style={{ background: base.color }}>
               {role.charAt(0).toUpperCase() + role.slice(1)}
             </span>
           </div>
-          <div className="ml-auto">
+          <div className="w-full sm:w-auto mt-4 sm:mt-0 sm:ml-auto">
             {!editing ? (
               <button onClick={() => setEditing(true)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors">
+                className="w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors">
                 <Pencil className="w-3.5 h-3.5" /> Edit Profile
               </button>
             ) : (
-              <div className="flex gap-2">
-                <button onClick={handleCancel} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <button onClick={handleCancel} className="justify-center flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
                   <X className="w-3.5 h-3.5" /> Cancel
                 </button>
-                <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90" style={{ background: base.color }}>
+                <button onClick={handleSave} className="justify-center flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90" style={{ background: base.color }}>
                   <Save className="w-3.5 h-3.5" /> Save
                 </button>
               </div>
