@@ -26,14 +26,14 @@ const typeColors: Record<string, [string, string]> = {
   'trash-2': ['#FEF2F2', '#EF4444'],
 }
 
+import { formatDateTime, formatDate as formatDateSafe } from '../utils/formatters'
+
 function formatTime(ts: string) {
-  const d = new Date(ts)
-  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return formatDateTime(ts, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function formatDate(ts: string) {
-  const d = new Date(ts)
-  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  return formatDateSafe(ts)
 }
 
 function groupByDate(items: ActivityModel[]) {

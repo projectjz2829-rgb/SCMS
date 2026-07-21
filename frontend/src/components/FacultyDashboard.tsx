@@ -9,6 +9,7 @@ import { announcementsApi, Announcement } from '../api/announcements'
 import { useAuth } from '../contexts/AuthContext'
 import { EmptyState } from './ui/EmptyState'
 import { BarChart as BarChartIcon, PieChart, Activity } from 'lucide-react'
+import { formatDate } from '../utils/formatters'
 
 export default function FacultyDashboard() {
   const { user } = useAuth()
@@ -151,7 +152,7 @@ export default function FacultyDashboard() {
                 </div>
                 <p className="text-sm font-semibold text-slate-900 mb-1 leading-snug">{a.title}</p>
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{a.message}</p>
-                <p className="text-xs text-slate-400 mt-1">{new Date(a.created_at || '').toLocaleDateString()}</p>
+                <p className="text-xs text-slate-400 mt-1">{formatDate(a.created_at)}</p>
               </div>
             ))}
           </div>

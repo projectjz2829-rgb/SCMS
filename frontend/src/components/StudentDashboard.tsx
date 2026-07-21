@@ -9,6 +9,7 @@ import { coursesApi, Course } from '../api/courses'
 import { announcementsApi, Announcement } from '../api/announcements'
 import { marksApi, Marks } from '../api/marks'
 import { useAuth } from '../contexts/AuthContext'
+import { formatDate } from '../utils/formatters'
 
 export default function StudentDashboard() {
   const { user } = useAuth()
@@ -181,7 +182,7 @@ export default function StudentDashboard() {
                   <span className="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase bg-white text-slate-500 shadow-sm border border-slate-100">
                     {a.priority}
                   </span>
-                  <span className="text-xs text-slate-400 ml-auto">{new Date(a.created_at || '').toLocaleDateString()}</span>
+                  <span className="text-xs text-slate-400 ml-auto">{formatDate(a.created_at)}</span>
                 </div>
                 <p className="text-sm font-semibold text-slate-900 mb-1 leading-snug">{a.title}</p>
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{a.message}</p>

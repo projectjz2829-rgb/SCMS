@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { Announcement } from '../api/announcements'
 import { notificationsApi } from '../api/notifications'
+import { formatDate } from '../utils/formatters'
 
 interface NavItem {
   id: string
@@ -242,7 +243,7 @@ export default function Layout() {
                           <div>
                             <p className="text-sm text-slate-900 font-medium">{n.title}</p>
                             <p className="text-xs text-slate-500 mt-1 line-clamp-2">{n.message}</p>
-                            <p className="text-[10px] text-slate-400 mt-2">{new Date(n.created_at).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-slate-400 mt-2">{formatDate(n.created_at)}</p>
                           </div>
                         </button>
                       ))}

@@ -8,6 +8,7 @@ import { dashboardApi } from '../api/dashboard'
 import { announcementsApi, Announcement } from '../api/announcements'
 import { activitiesApi, Activity as ActivityModel } from '../api/activities'
 import { notificationsApi } from '../api/notifications'
+import { formatDateTime, formatDate } from '../utils/formatters'
 import { Bell } from 'lucide-react'
 
 const defaultStats = [
@@ -98,7 +99,7 @@ export default function Dashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{stat.label}</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2 tabular-nums">{stat.value.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2 tabular-nums">{(stat.value ?? 0).toLocaleString()}</p>
                 <div className="flex items-center gap-1 mt-2">
                   {stat.up
                     ? <TrendingUp className="w-3 h-3" style={{ color: '#22C55E' }} />
@@ -185,7 +186,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-slate-400">by {act.actor}</span>
                     <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                    <span className="text-xs text-slate-400">{new Date(act.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-xs text-slate-400">{formatDateTime(act.timestamp, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
               </div>
@@ -216,7 +217,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 truncate">{ann.message}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{new Date(ann.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{formatDate(ann.created_at)}</p>
                 </div>
               </div>
             ))}
@@ -239,7 +240,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-900 truncate">{n.title}</p>
                   <p className="text-xs text-slate-500 mt-0.5 truncate">{n.message}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatDate(n.created_at)}</p>
                 </div>
               </div>
             ))}
