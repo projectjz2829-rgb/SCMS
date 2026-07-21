@@ -1,1 +1,0 @@
-import{s as e}from"./index-DzGPRz9A.js";var t={downloadAttendanceCsv:async t=>(await e.get(`/reports/csv/attendance?course_id=${t}`,{responseType:`blob`})).data,downloadMarksCsv:async t=>(await e.get(`/reports/csv/marks?course_id=${t}`,{responseType:`blob`})).data,getTranscript:async t=>(await e.get(`/reports/transcript/${t}`)).data};export{t};
