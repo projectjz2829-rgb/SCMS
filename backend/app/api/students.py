@@ -170,7 +170,7 @@ def manage_students():
         "password": {"type": str, "required": True, "min_length": 6},
         "roll_no": {"type": str, "required": True, "max_length": 20},
         "full_name": {"type": str, "required": True, "max_length": 100},
-        "dept": {"type": str, "required": True, "max_length": 100},
+        "dept": {"type": str, "required": True, "max_length": 50},
         "year": {"type": int, "required": True, "min_val": 1, "max_val": 4},
         "section": {"type": str, "required": True, "max_length": 10},
         "phone": {"type": str, "required": False, "max_length": 20}

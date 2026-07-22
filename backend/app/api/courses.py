@@ -129,7 +129,7 @@ def manage_courses():
     schema = {
         "name": {"type": str, "required": True, "max_length": 100},
         "code": {"type": str, "required": True, "max_length": 20},
-        "dept": {"type": str, "required": True, "max_length": 100},
+        "dept": {"type": str, "required": True, "max_length": 50},
         "semester": {"type": int, "required": True, "min_val": 1, "max_val": 8},
         "faculty_id": {"type": int, "required": False}
     }

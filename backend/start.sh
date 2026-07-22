@@ -15,9 +15,10 @@ with app.app_context():
     tables = inspector.get_table_names()
     
     initial_tables = {"users", "students", "faculty", "courses", "enrollments", "attendance", "marks"}
+    newer_tables = {"announcements", "activity_logs", "user_settings", "announcement_reads"}
     
-    # If the database has all initial tables but no 'announcements' (from 2nd migration)
-    if initial_tables.issubset(set(tables)) and 'announcements' not in tables:
+    # If the database has initial tables but is missing any of the newer tables
+    if initial_tables.issubset(set(tables)) and not newer_tables.issubset(set(tables)):
         with db.engine.connect() as conn:
             with conn.begin():
                 if 'alembic_version' not in tables:

@@ -113,7 +113,7 @@ def manage_faculty():
         "password": {"type": str, "required": True, "min_length": 6},
         "emp_id": {"type": str, "required": True, "max_length": 20},
         "full_name": {"type": str, "required": True, "max_length": 100},
-        "dept": {"type": str, "required": True, "max_length": 100},
+        "dept": {"type": str, "required": True, "max_length": 50},
         "designation": {"type": str, "required": True, "max_length": 80},
         "phone": {"type": str, "required": False, "max_length": 20}
     }
