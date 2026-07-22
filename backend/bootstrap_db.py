@@ -21,15 +21,16 @@ def bootstrap():
             with db.engine.connect() as conn:
                 with conn.begin():
                     if 'alembic_version' not in tables:
-                        print('==> Bootstrapping missing alembic_version to initial schema...')
+                        print('==> Bootstrapping missing alembic_version table...')
                         conn.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, PRIMARY KEY (version_num))"))
                         conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('e2495bd7b9ab')"))
                     else:
                         result = conn.execute(text("SELECT version_num FROM alembic_version"))
                         version = result.scalar()
                         if version != 'e2495bd7b9ab':
-                            print(f'==> Repairing incorrect alembic_version {version} -> e2495bd7b9ab...')
-                            conn.execute(text("UPDATE alembic_version SET version_num = 'e2495bd7b9ab'"))
+                            print(f'==> Repairing alembic_version (was {version}) -> setting to e2495bd7b9ab...')
+                            conn.execute(text("DELETE FROM alembic_version"))
+                            conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('e2495bd7b9ab')"))
 
 if __name__ == '__main__':
     bootstrap()
