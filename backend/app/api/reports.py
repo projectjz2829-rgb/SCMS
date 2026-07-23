@@ -13,6 +13,61 @@ from app.api.responses import success_response, error_response
 
 reports_bp = Blueprint("api_reports", __name__)
 
+
+@reports_bp.route("/students", methods=["GET"])
+@login_required
+def get_students_for_reports():
+    """GET /api/reports/students
+    Admin: search across all students.
+    Faculty: search only students enrolled in their assigned courses.
+    Student: 403.
+    Returns minimal fields required for transcript search.
+    """
+    if current_user.role == RoleEnum.student:
+        return error_response("Access forbidden.", status_code=403)
+
+    search = request.args.get("search", "").strip()
+
+    if current_user.role == RoleEnum.admin:
+        query = db.session.query(Student)
+        if search:
+            query = query.filter(
+                db.or_(
+                    Student.full_name.ilike(f"%{search}%"),
+                    Student.roll_no.ilike(f"%{search}%"),
+                )
+            )
+        students = query.order_by(Student.roll_no).limit(20).all()
+
+    else:  # faculty
+        fp = current_user.faculty_profile
+        if not fp:
+            return success_response([])
+
+        from sqlalchemy import distinct
+        query = (
+            db.session.query(Student)
+            .join(Enrollment, Enrollment.student_id == Student.id)
+            .join(Course, Course.id == Enrollment.course_id)
+            .filter(Course.faculty_id == fp.id)
+            .distinct()
+        )
+        if search:
+            query = query.filter(
+                db.or_(
+                    Student.full_name.ilike(f"%{search}%"),
+                    Student.roll_no.ilike(f"%{search}%"),
+                )
+            )
+        students = query.order_by(Student.roll_no).limit(20).all()
+
+    data = [
+        {"id": s.id, "full_name": s.full_name, "roll_no": s.roll_no, "dept": s.dept}
+        for s in students
+    ]
+    return success_response(data)
+
+
 @reports_bp.route("/csv/attendance", methods=["GET"])
 @login_required
 def export_attendance_csv():

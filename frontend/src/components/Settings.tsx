@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Moon, Sun, Monitor, Bell, BellOff, Lock, Eye, EyeOff, CheckCircle, Shield } from 'lucide-react'
+import { Moon, Sun, Monitor, Bell, BellOff, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { settingsApi } from '../api/settings'
 
 const tabs = ['Theme', 'Notifications', 'Security'] as const
@@ -22,11 +22,13 @@ export default function Settings() {
       try {
         const data = await settingsApi.getSettings()
         if (data) {
-          setTheme(data.theme as 'light' | 'dark' | 'system' || 'light')
+          const savedTheme = (data.theme as 'light' | 'dark' | 'system') || 'light'
+          setTheme(savedTheme)
+          document.documentElement.classList.toggle('dark', savedTheme === 'dark')
           setNotifs(data.notifications)
         }
-      } catch (err) {
-        console.error('Failed to load settings', err)
+      } catch {
+        // settings load failed silently
       }
     }
     loadSettings()
@@ -35,9 +37,10 @@ export default function Settings() {
   const saveTheme = async () => {
     try {
       await settingsApi.updateSettings({ theme })
+      document.documentElement.classList.toggle('dark', theme === 'dark')
       showSaved('Theme saved')
-    } catch (err) {
-      console.error('Failed to save theme', err)
+    } catch {
+      // save failed silently
     }
   }
 
@@ -45,8 +48,8 @@ export default function Settings() {
     try {
       await settingsApi.updateSettings({ notifications: notifs })
       showSaved('Notification preferences saved')
-    } catch (err) {
-      console.error('Failed to save notifications', err)
+    } catch {
+      // save failed silently
     }
   }
 
@@ -55,9 +58,8 @@ export default function Settings() {
       await settingsApi.updatePassword(pwForm.current, pwForm.newPw)
       setPwForm({ current: '', newPw: '', confirm: '' })
       showSaved('Password updated successfully')
-    } catch (err) {
-      console.error('Failed to update password', err)
-      alert('Failed to update password. Check current password.')
+    } catch {
+      showSaved('Failed to update password. Check current password.')
     }
   }
 
@@ -192,34 +194,7 @@ export default function Settings() {
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-green-50">
-                <Shield className="w-4 h-4 text-green-600" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">Account Security</h3>
-                <p className="text-xs text-slate-400">Additional security options</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {[
-                ['Two-factor authentication', 'Add an extra layer of security', false],
-                ['Login alerts', 'Get notified of new sign-ins', true],
-                ['Session timeout', 'Auto-logout after 30 minutes of inactivity', true],
-              ].map(([label, desc, active]) => (
-                <div key={label as string} className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{label}</p>
-                    <p className="text-xs text-slate-400">{desc}</p>
-                  </div>
-                  <div className={`w-11 h-6 rounded-full flex items-center ${active ? '' : 'bg-slate-200'}`} style={active ? { background: '#22C55E' } : {}}>
-                    <span className={`w-5 h-5 bg-white rounded-full shadow-sm mx-0.5 transition-transform ${active ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+
         </div>
       )}
 
