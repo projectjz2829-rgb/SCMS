@@ -24,8 +24,13 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const message = error.response?.data?.error || error.message || 'An unexpected network error occurred';
+  (error: unknown) => {
+    let message = 'An unexpected network error occurred';
+    if (axios.isAxiosError(error)) {
+      message = error.response?.data?.error || error.response?.data?.message || error.message || message;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
     window.dispatchEvent(new CustomEvent('global-toast', { detail: { message, type: 'error' } }));
     return Promise.reject(error);
   }

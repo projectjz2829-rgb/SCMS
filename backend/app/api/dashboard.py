@@ -23,13 +23,22 @@ def get_stats():
         colors = ['#2563EB', '#06B6D4', '#22C55E', '#F59E0B', '#8B5CF6']
         students_by_dept = [{"name": dept, "students": count, "fill": colors[i % len(colors)]} for i, (dept, count) in enumerate(dept_counts)]
 
+        from app.models.attendance import Attendance, AttendanceStatusEnum
+        from sqlalchemy import case, cast, Float
+
+        total_att = db.session.query(func.count(Attendance.id)).scalar() or 0
+        present_att = db.session.query(func.count(Attendance.id)).filter(
+            Attendance.status.in_([AttendanceStatusEnum.present, AttendanceStatusEnum.late])
+        ).scalar() or 0
+        avg_att = round((present_att / total_att) * 100, 1) if total_att > 0 else 0.0
+
         stats = {
             "total_students": db.session.query(func.count(Student.id)).scalar(),
             "total_faculty": db.session.query(func.count(Faculty.id)).scalar(),
             "total_courses": db.session.query(func.count(Course.id)).scalar(),
-            "avg_attendance": None, # Requires complex join, leaving empty as requested
+            "avg_attendance": avg_att,
             "students_by_dept": students_by_dept,
-            "attendance_trend": [] # Empty array for missing trend
+            "attendance_trend": []
         }
     elif current_user.role == RoleEnum.faculty:
         fp = current_user.faculty_profile
@@ -38,14 +47,27 @@ def get_stats():
             
             from app.models.course import Enrollment
             total_students = db.session.query(func.count(func.distinct(Enrollment.student_id))).join(Course).filter(Course.faculty_id == fp.id).scalar()
+            
+            from app.models.attendance import Attendance, AttendanceStatusEnum
+            own_course_ids = [c.id for c in Course.query.filter_by(faculty_id=fp.id).all()]
+            if own_course_ids:
+                f_total_att = db.session.query(func.count(Attendance.id)).filter(Attendance.course_id.in_(own_course_ids)).scalar() or 0
+                f_present_att = db.session.query(func.count(Attendance.id)).filter(
+                    Attendance.course_id.in_(own_course_ids),
+                    Attendance.status.in_([AttendanceStatusEnum.present, AttendanceStatusEnum.late])
+                ).scalar() or 0
+                f_avg_att = round((f_present_att / f_total_att) * 100, 1) if f_total_att > 0 else 0.0
+            else:
+                f_avg_att = 0.0
         else:
             total_courses = 0
             total_students = 0
+            f_avg_att = 0.0
             
         stats = {
             "total_courses": total_courses,
             "total_students": total_students,
-            "avg_attendance": None,
+            "avg_attendance": f_avg_att,
             "weekly_attendance": [],
             "schedule": []
         }
@@ -86,15 +108,24 @@ def get_stats():
             
             colors = {"O": "#22C55E", "A+": "#22C55E", "A": "#2563EB", "B+": "#2563EB", "B": "#F59E0B", "U": "#EF4444"}
             grade_distribution = [{"grade": g, "count": c, "fill": colors.get(g, "#94A3B8")} for g, c in grade_counts if g]
+
+            from app.models.attendance import Attendance, AttendanceStatusEnum
+            s_total_att = db.session.query(func.count(Attendance.id)).filter_by(student_id=sp.id).scalar() or 0
+            s_present_att = db.session.query(func.count(Attendance.id)).filter(
+                Attendance.student_id == sp.id,
+                Attendance.status.in_([AttendanceStatusEnum.present, AttendanceStatusEnum.late])
+            ).scalar() or 0
+            s_avg_att = round((s_present_att / s_total_att) * 100, 1) if s_total_att > 0 else 0.0
             
         else:
             total_courses = 0
             overall_gpa = 0.0
             grade_distribution = []
+            s_avg_att = 0.0
             
         stats = {
             "total_courses": total_courses,
-            "avg_attendance": 100, # Mocked temporarily as attendance is excluded from Marks phase
+            "avg_attendance": s_avg_att,
             "overall_gpa": float(overall_gpa) if overall_gpa else 0.0,
             "attendance_trend": [],
             "grade_distribution": grade_distribution

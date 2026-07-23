@@ -7,7 +7,7 @@ import { BookMarked, CheckCircle, Award, Bell, ChevronRight } from 'lucide-react
 import { dashboardApi, DashboardStats } from '../api/dashboard'
 import { coursesApi, Course } from '../api/courses'
 import { announcementsApi, Announcement } from '../api/announcements'
-import { marksApi, Marks } from '../api/marks'
+import { studentsApi, StudentMarkRecord } from '../api/students'
 import { useAuth } from '../contexts/AuthContext'
 import { formatDate } from '../utils/formatters'
 
@@ -16,14 +16,36 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState<Partial<DashboardStats>>({})
   const [myCourses, setMyCourses] = useState<Course[]>([])
   const [announcementsList, setAnnouncementsList] = useState<Announcement[]>([])
-  const [myMarks, setMyMarks] = useState<Marks[]>([])
+  const [myMarks, setMyMarks] = useState<StudentMarkRecord[]>([])
+  const [attendanceList, setAttendanceList] = useState<{ course_code: string; percentage: number; present: number; total: number }[]>([])
 
   useEffect(() => {
-    dashboardApi.getStats().then(setStats).catch(console.error)
-    coursesApi.getAll().then(res => setMyCourses(res.data.slice(0, 3))).catch(console.error)
-    announcementsApi.getAll().then(setAnnouncementsList).catch(console.error)
-    marksApi.getAll().then(setMyMarks).catch(console.error)
-  }, [])
+    const studentId = user?.profile?.id as number | undefined
+    dashboardApi.getStats().then(setStats).catch(() => {})
+    coursesApi.getAll().then(res => setMyCourses(res.data.slice(0, 3))).catch(() => {})
+    announcementsApi.getAll().then(setAnnouncementsList).catch(() => {})
+    if (studentId) {
+      studentsApi.getMyMarks(studentId).then(setMyMarks).catch(() => {})
+      studentsApi.getMyAttendance(studentId).then(records => {
+        const map = new Map<string, { total: number; present: number }>()
+        for (const r of records) {
+          const code = r.course_code || 'Course'
+          if (!map.has(code)) map.set(code, { total: 0, present: 0 })
+          const item = map.get(code)!
+          item.total += 1
+          if (r.status === 'present' || r.status === 'late') item.present += 1
+        }
+        const list = Array.from(map.entries()).map(([course_code, data]) => ({
+          course_code,
+          total: data.total,
+          present: data.present,
+          percentage: data.total > 0 ? Math.round((data.present / data.total) * 100) : 0
+        }))
+        setAttendanceList(list)
+      }).catch(() => {})
+    }
+  }, [user])
+
 
   const gpa = stats.overall_gpa?.toFixed(2) || '0.00'
   const avgAttendance = stats.avg_attendance || 0
@@ -132,9 +154,26 @@ export default function StudentDashboard() {
         {/* Attendance per course */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Attendance by Course</h2>
-          <div className="space-y-4">
-            <p className="text-sm text-slate-400">No attendance records found.</p>
-          </div>
+            {attendanceList.length === 0 ? (
+              <p className="text-sm text-slate-400">No attendance records found.</p>
+            ) : (
+              attendanceList.map((item) => (
+                <div key={item.course_code} className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-slate-900">{item.course_code}</span>
+                    <span className={item.percentage >= 75 ? 'text-green-600' : 'text-amber-600'}>
+                      {item.percentage}% ({item.present}/{item.total})
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${item.percentage >= 75 ? 'bg-green-500' : 'bg-amber-500'}`}
+                      style={{ width: `${item.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
         </div>
 
         {/* Marks summary */}
@@ -142,26 +181,40 @@ export default function StudentDashboard() {
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Marks & Grades</h2>
           <div className="space-y-3">
             {myMarks.length === 0 && <p className="text-sm text-slate-400">No marks recorded yet.</p>}
-            {myMarks.map((m, i) => (
-              <div key={i} className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-slate-900 truncate flex-1">{m.course_code}</p>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: '#F0FDF4', color: '#22C55E' }}>{m.grade}</span>
-                    <span className="text-xs font-bold text-slate-700">{m.total_earned}/175</span>
+            {myMarks.map(m => {
+              const total = m.total_earned ?? (m.internal_1 + m.internal_2 + m.semester_final + m.practical)
+              const pct = (total / 175) * 100
+              let grade = m.grade
+              if (!grade) {
+                if (pct >= 90) grade = 'O'
+                else if (pct >= 80) grade = 'A+'
+                else if (pct >= 70) grade = 'A'
+                else if (pct >= 60) grade = 'B+'
+                else if (pct >= 50) grade = 'B'
+                else grade = 'U'
+              }
+              return (
+                <div key={m.id} className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-semibold text-slate-900 truncate flex-1">{m.course_code}</p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: '#F0FDF4', color: '#22C55E' }}>{grade}</span>
+                      <span className="text-xs font-bold text-slate-700">{total}/175</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-400">
+                    <span>Int-1: {m.internal_1}/20</span>
+                    <span>Int-2: {m.internal_2}/20</span>
+                    <span>Final: {m.semester_final}/50</span>
+                    <span>Prac: {m.practical}/25</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
+                    <div className="h-full rounded-full bg-blue-500" style={{ width: `${(total / 175) * 100}%` }} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <span>Int-1: {m.internal_1}/25</span>
-                  <span>Int-2: {m.internal_2}/25</span>
-                  <span>Final: {m.semester_final}/75</span>
-                  <span>Prac: {m.practical}/50</span>
-                </div>
-                <div className="h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
-                  <div className="h-full rounded-full bg-blue-500" style={{ width: `${((m.total_earned || 0) / 175) * 100}%` }} />
-                </div>
-              </div>
-            ))}
+              )
+            })}
+
           </div>
         </div>
       </div>
