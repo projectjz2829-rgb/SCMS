@@ -105,22 +105,26 @@ export default function Courses() {
   const loadData = async (initialLoad = true) => {
     if (initialLoad) setLoading(true)
     try {
-      const [coursesRes, facultyRes] = await Promise.all([
-        coursesApi.getAll({
-          search: debouncedSearch,
-          dept: deptFilter,
-          semester: semFilter,
-          page,
-          limit: PER_PAGE
-        }),
-        facultyApi.getAll()
-      ])
+      const coursesRes = await coursesApi.getAll({
+        search: debouncedSearch,
+        dept: deptFilter,
+        semester: semFilter,
+        page,
+        limit: PER_PAGE
+      })
       setData(coursesRes.data)
       setTotalPages(coursesRes.meta?.pages || 1)
       setTotalItems(coursesRes.meta?.total || coursesRes.data.length)
-      setFacultyList(facultyRes.data || facultyRes)
-    } catch (e) {
-      error('Failed to load data')
+      
+      try {
+        const facultyRes = await facultyApi.getAll()
+        setFacultyList(facultyRes.data || facultyRes)
+      } catch {
+        // Faculty role may not have permission for facultyApi.getAll()
+        setFacultyList([])
+      }
+    } catch {
+      error('Failed to load courses')
     } finally {
       setLoading(false)
     }

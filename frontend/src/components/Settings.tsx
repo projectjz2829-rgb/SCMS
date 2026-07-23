@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Moon, Sun, Monitor, Bell, BellOff, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { Bell, BellOff, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { settingsApi } from '../api/settings'
 
-const tabs = ['Theme', 'Notifications', 'Security'] as const
+const tabs = ['Notifications', 'Security'] as const
 type Tab = typeof tabs[number]
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<Tab>('Theme')
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light')
+  const [activeTab, setActiveTab] = useState<Tab>('Notifications')
   const [notifs, setNotifs] = useState({
     announcements: true, marks: true, attendance: false, system: true, email: false,
   })
@@ -21,10 +20,7 @@ export default function Settings() {
     const loadSettings = async () => {
       try {
         const data = await settingsApi.getSettings()
-        if (data) {
-          const savedTheme = (data.theme as 'light' | 'dark' | 'system') || 'light'
-          setTheme(savedTheme)
-          document.documentElement.classList.toggle('dark', savedTheme === 'dark')
+        if (data && data.notifications) {
           setNotifs(data.notifications)
         }
       } catch {
@@ -33,16 +29,6 @@ export default function Settings() {
     }
     loadSettings()
   }, [])
-
-  const saveTheme = async () => {
-    try {
-      await settingsApi.updateSettings({ theme })
-      document.documentElement.classList.toggle('dark', theme === 'dark')
-      showSaved('Theme saved')
-    } catch {
-      // save failed silently
-    }
-  }
 
   const saveNotifs = async () => {
     try {
@@ -54,6 +40,14 @@ export default function Settings() {
   }
 
   const handlePasswordUpdate = async () => {
+    if (pwForm.newPw.length < 8) {
+      showSaved('Password must be at least 8 characters')
+      return
+    }
+    if (pwForm.newPw !== pwForm.confirm) {
+      showSaved('Passwords do not match')
+      return
+    }
     try {
       await settingsApi.updatePassword(pwForm.current, pwForm.newPw)
       setPwForm({ current: '', newPw: '', confirm: '' })
@@ -62,12 +56,6 @@ export default function Settings() {
       showSaved('Failed to update password. Check current password.')
     }
   }
-
-  const themeOptions = [
-    { value: 'light', label: 'Light', icon: <Sun className="w-5 h-5" /> },
-    { value: 'dark', label: 'Dark', icon: <Moon className="w-5 h-5" /> },
-    { value: 'system', label: 'System', icon: <Monitor className="w-5 h-5" /> },
-  ] as const
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-5">
@@ -87,29 +75,6 @@ export default function Settings() {
           </button>
         ))}
       </div>
-
-      {/* Theme */}
-      {activeTab === 'Theme' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
-          <h3 className="text-sm font-semibold text-slate-900">Appearance</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {themeOptions.map(opt => (
-              <button key={opt.value} type="button" onClick={() => setTheme(opt.value)}
-                className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all ${
-                  theme === opt.value ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                }`}>
-                <span className={theme === opt.value ? 'text-blue-600' : 'text-slate-400'}>{opt.icon}</span>
-                <span className={`text-sm font-semibold ${theme === opt.value ? 'text-blue-600' : 'text-slate-600'}`}>{opt.label}</span>
-                {theme === opt.value && <div className="w-2 h-2 rounded-full bg-blue-500" />}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-slate-400">Theme changes are applied immediately across the portal.</p>
-          <button type="button" onClick={saveTheme} className="px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90" style={{ background: '#2563EB' }}>
-            Save Preferences
-          </button>
-        </div>
-      )}
 
       {/* Notifications */}
       {activeTab === 'Notifications' && (
@@ -187,14 +152,12 @@ export default function Settings() {
             <button
               type="button"
               onClick={handlePasswordUpdate}
-              disabled={!pwForm.current || !pwForm.newPw || pwForm.newPw !== pwForm.confirm}
+              disabled={!pwForm.current || !pwForm.newPw || pwForm.newPw !== pwForm.confirm || pwForm.newPw.length < 8}
               className="px-4 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 hover:opacity-90 transition-opacity"
               style={{ background: '#2563EB' }}>
               Update Password
             </button>
           </div>
-
-
         </div>
       )}
 
