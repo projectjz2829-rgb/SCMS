@@ -20,12 +20,14 @@ def current_user_info():
     # Include profile details based on role if desired
     if current_user.role.value == "student" and current_user.student_profile:
         user_data["profile"] = {
+            "id": current_user.student_profile.id,
             "roll_no": current_user.student_profile.roll_no,
             "full_name": current_user.student_profile.full_name,
             "dept": current_user.student_profile.dept,
         }
     elif current_user.role.value == "faculty" and current_user.faculty_profile:
         user_data["profile"] = {
+            "id": current_user.faculty_profile.id,
             "emp_id": current_user.faculty_profile.emp_id,
             "full_name": current_user.faculty_profile.full_name,
             "dept": current_user.faculty_profile.dept,

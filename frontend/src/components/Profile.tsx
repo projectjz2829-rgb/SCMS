@@ -1,45 +1,166 @@
-import { useState } from 'react'
-import { Camera, Pencil, Save, X, CheckCircle } from 'lucide-react'
-type Role = 'admin' | 'faculty' | 'student'
+import { useState, useEffect, useRef } from 'react'
+import { Camera, Pencil, Save, X } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
+import { studentsApi, Student } from '../api/students'
+import { facultyApi, Faculty } from '../api/faculty'
 
-interface Props {
-  role: Role
+interface EditableFields {
+  full_name: string
+  phone: string
 }
 
-const profileData: Record<Role, {
-  name: string; phone: string; email: string; photo: string;
-  readonly: Record<string, string>;
-  avatar: string; color: string;
-}> = {
-  admin: {
-    name: 'System Administrator', phone: '+92-300-0000000', email: 'admin@scms.edu', photo: '', avatar: 'SA', color: '#2563EB',
-    readonly: { Role: 'System Admin', 'Employee ID': 'ADM-001', Department: 'Administration', 'Joined': '2020-01-15' },
-  },
-  faculty: {
-    name: 'Dr. Asad Raza', phone: '+92-300-9876543', email: 'asad.raza@scms.edu', photo: '', avatar: 'AR', color: '#06B6D4',
-    readonly: { 'Employee ID': 'FAC-001', Department: 'Computer Science', Designation: 'Professor', Experience: '12 years', Joined: '2012-08-01' },
-  },
-  student: {
-    name: 'Aisha Malik', phone: '+92-300-1234567', email: 'aisha.malik@scms.edu', photo: '', avatar: 'AM', color: '#22C55E',
-    readonly: { 'Roll Number': 'CS-2024-001', Department: 'Computer Science', Year: 'Year 3', Section: 'Section A', CGPA: '3.80' },
-  },
+interface ReadonlyField {
+  label: string
+  value: string
 }
 
-export default function Profile({ role }: Props) {
-  const base = profileData[role]
-  const [form, setForm] = useState({ name: base.name, phone: base.phone, email: base.email })
+function buildReadonly(role: string, profile: Student | Faculty | null): ReadonlyField[] {
+  if (!profile) return []
+  if (role === 'student') {
+    const s = profile as Student
+    return [
+      { label: 'Roll Number', value: s.roll_no },
+      { label: 'Department', value: s.dept },
+      { label: 'Year', value: `Year ${s.year}` },
+      { label: 'Section', value: `Section ${s.section}` },
+    ]
+  }
+  if (role === 'faculty') {
+    const f = profile as Faculty
+    return [
+      { label: 'Employee ID', value: f.emp_id },
+      { label: 'Department', value: f.dept },
+      { label: 'Designation', value: f.designation },
+    ]
+  }
+  return [{ label: 'Role', value: 'Administrator' }]
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(n => n[0] ?? '')
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+const roleColors: Record<string, string> = {
+  admin: '#2563EB',
+  faculty: '#06B6D4',
+  student: '#22C55E',
+}
+
+export default function Profile() {
+  const { user, role } = useAuth()
+  const { success, error } = useToast()
+
+  const [profile, setProfile] = useState<Student | Faculty | null>(null)
+  const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState<EditableFields>({ full_name: '', phone: '' })
+  const abortRef = useRef<AbortController | null>(null)
 
-  const handleSave = () => {
-    setEditing(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+  useEffect(() => {
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
+
+    if (!user || !role) {
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+
+    const profileId = user.profile?.id as number | undefined
+
+    const fetch =
+      role === 'student' && profileId
+        ? studentsApi.getById(profileId)
+        : role === 'faculty' && profileId
+        ? facultyApi.getById(profileId)
+        : Promise.resolve(null)
+
+    fetch
+      .then(data => {
+        setProfile(data)
+        if (data) {
+          setForm({
+            full_name: (data as Student | Faculty).full_name ?? '',
+            phone: (data as Student & Faculty).phone ?? '',
+          })
+        }
+      })
+      .catch(() => error('Failed to load profile'))
+      .finally(() => setLoading(false))
+
+    return () => { abortRef.current?.abort() }
+  }, [user, role])
+
+  const handleSave = async () => {
+    if (!profile || !role) return
+    const profileId = (profile as Student).id ?? (profile as Faculty).id
+    if (!profileId) return
+    setSaving(true)
+    try {
+      if (role === 'student') {
+        const updated = await studentsApi.update(profileId, {
+          full_name: form.full_name,
+          phone: form.phone,
+        })
+        setProfile(updated)
+        setForm({ full_name: updated.full_name, phone: updated.phone ?? '' })
+      } else if (role === 'faculty') {
+        const updated = await facultyApi.update(profileId, {
+          full_name: form.full_name,
+          phone: form.phone,
+        })
+        setProfile(updated)
+        setForm({ full_name: updated.full_name, phone: (updated as Faculty & { phone?: string }).phone ?? '' })
+      }
+      setEditing(false)
+      success('Profile updated successfully')
+    } catch {
+      error('Failed to update profile. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleCancel = () => {
-    setForm({ name: base.name, phone: base.phone, email: base.email })
+    if (profile) {
+      setForm({
+        full_name: (profile as Student | Faculty).full_name ?? '',
+        phone: (profile as Student & Faculty).phone ?? '',
+      })
+    }
     setEditing(false)
+  }
+
+  const displayName = form.full_name || user?.email || 'User'
+  const color = roleColors[role ?? 'admin'] ?? '#2563EB'
+  const readonly = buildReadonly(role ?? '', profile)
+  const email = user?.email ?? ''
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-slate-100 rounded-xl w-48" />
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+            <div className="flex gap-5">
+              <div className="w-20 h-20 rounded-2xl bg-slate-100" />
+              <div className="flex-1 space-y-2 pt-2">
+                <div className="h-4 bg-slate-100 rounded w-40" />
+                <div className="h-3 bg-slate-100 rounded w-24" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -53,89 +174,110 @@ export default function Profile({ role }: Props) {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row items-center gap-5">
           <div className="relative">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${base.color}, ${base.color}cc)` }}>
-              {base.avatar}
+            <div
+              className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
+              style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+            >
+              {getInitials(displayName)}
             </div>
             {editing && (
-              <button className="absolute -bottom-2 -right-2 w-7 h-7 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors">
+              <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors">
                 <Camera className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
-          <div className="text-center sm:text-left">
-            <h2 className="text-xl font-bold text-slate-900">{form.name}</h2>
-            <p className="text-sm text-slate-500 mt-0.5">{form.email}</p>
-            <span className="inline-flex mt-2 px-2.5 py-0.5 rounded-lg text-xs font-semibold text-white" style={{ background: base.color }}>
-              {role.charAt(0).toUpperCase() + role.slice(1)}
+          <div className="text-center sm:text-left flex-1">
+            <p className="text-lg font-bold text-slate-900">{displayName}</p>
+            <p className="text-sm text-slate-400 mt-0.5">{email}</p>
+            <span
+              className="inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full capitalize"
+              style={{ background: `${color}18`, color }}
+            >
+              {role}
             </span>
           </div>
-          <div className="w-full sm:w-auto mt-4 sm:mt-0 sm:ml-auto">
-            {!editing ? (
-              <button onClick={() => setEditing(true)}
-                className="w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors">
-                <Pencil className="w-3.5 h-3.5" /> Edit Profile
-              </button>
-            ) : (
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <button onClick={handleCancel} className="justify-center flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                  <X className="w-3.5 h-3.5" /> Cancel
-                </button>
-                <button onClick={handleSave} className="justify-center flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white rounded-xl transition-opacity hover:opacity-90" style={{ background: base.color }}>
-                  <Save className="w-3.5 h-3.5" /> Save
-                </button>
-              </div>
-            )}
-          </div>
+          {!editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+            >
+              <Pencil className="w-4 h-4" /> Edit
+            </button>
+          )}
         </div>
-
-        {saved && (
-          <div className="mt-4 flex items-center gap-2 px-4 py-2.5 rounded-xl" style={{ background: '#F0FDF4' }}>
-            <CheckCircle className="w-4 h-4" style={{ color: '#22C55E' }} />
-            <span className="text-sm font-medium" style={{ color: '#22C55E' }}>Profile saved successfully</span>
-          </div>
-        )}
       </div>
 
       {/* Editable fields */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
         <h3 className="text-sm font-semibold text-slate-900">Personal Information</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {[
-            { label: 'Full Name', key: 'name', type: 'text' },
-            { label: 'Phone Number', key: 'phone', type: 'tel' },
-            { label: 'Email Address', key: 'email', type: 'email' },
-          ].map(({ label, key, type }) => (
-            <div key={key} className={key === 'email' ? 'sm:col-span-2' : ''}>
-              <label className="block text-xs font-medium text-slate-500 mb-1.5">{label}</label>
-              {editing ? (
-                <input
-                  type={type}
-                  value={(form as Record<string, string>)[key]}
-                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 bg-slate-50 text-slate-900"
-                />
-              ) : (
-                <p className="text-sm font-medium text-slate-800 py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-100">
-                  {(form as Record<string, string>)[key]}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Read-only fields */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
-        <h3 className="text-sm font-semibold text-slate-900">Academic Information <span className="text-xs font-normal text-slate-400 ml-1">(read-only)</span></h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {Object.entries(base.readonly).map(([label, value]) => (
-            <div key={label} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <p className="text-xs text-slate-400 font-medium mb-0.5">{label}</p>
-              <p className="text-sm font-semibold text-slate-800">{value}</p>
-            </div>
-          ))}
+        {/* Full name */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">Full Name</label>
+          {editing ? (
+            <input
+              type="text"
+              value={form.full_name}
+              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+              className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          ) : (
+            <p className="text-sm font-medium text-slate-900">{form.full_name || '—'}</p>
+          )}
         </div>
+
+        {/* Email — always readonly */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">Email</label>
+          <p className="text-sm font-medium text-slate-900">{email}</p>
+        </div>
+
+        {/* Phone */}
+        {role !== 'admin' && (
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Phone</label>
+            {editing ? (
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            ) : (
+              <p className="text-sm font-medium text-slate-900">{form.phone || '—'}</p>
+            )}
+          </div>
+        )}
+
+        {/* Readonly role-specific fields */}
+        {readonly.map(field => (
+          <div key={field.label}>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">{field.label}</label>
+            <p className="text-sm font-medium text-slate-900">{field.value || '—'}</p>
+          </div>
+        ))}
+
+        {/* Save / Cancel */}
+        {editing && (
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60"
+              style={{ background: '#2563EB' }}
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-60"
+            >
+              <X className="w-4 h-4" /> Cancel
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

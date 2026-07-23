@@ -53,6 +53,12 @@ def manage_courses():
             .outerjoin(Enrollment, Course.id == Enrollment.course_id)
             .group_by(Course.id, Faculty.id)
         )
+
+        # Faculty may only see courses assigned to them
+        if current_user.role == RoleEnum.faculty:
+            fp = current_user.faculty_profile
+            faculty_id_filter = fp.id if fp else -1
+            query = query.filter(Course.faculty_id == faculty_id_filter)
         
         search = request.args.get("search", "").strip()
         if search:

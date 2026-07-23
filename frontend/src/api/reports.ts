@@ -28,23 +28,36 @@ export interface TranscriptData {
   }>
 }
 
+export interface ReportStudent {
+  id: number
+  full_name: string
+  roll_no: string
+  dept: string
+}
+
 export const reportsApi = {
   downloadAttendanceCsv: async (courseId: number) => {
-    const res = await api.get(`/reports/csv/attendance?course_id=${courseId}`, {
+    const res = await api.get(`/api/reports/csv/attendance?course_id=${courseId}`, {
       responseType: 'blob'
     })
     return res.data
   },
 
   downloadMarksCsv: async (courseId: number) => {
-    const res = await api.get(`/reports/csv/marks?course_id=${courseId}`, {
+    const res = await api.get(`/api/reports/csv/marks?course_id=${courseId}`, {
       responseType: 'blob'
     })
     return res.data
   },
 
   getTranscript: async (studentId: number) => {
-    const res = await api.get<{ data: TranscriptData }>(`/reports/transcript/${studentId}`)
+    const res = await api.get<{ data: TranscriptData }>(`/api/reports/transcript/${studentId}`)
     return res.data
-  }
+  },
+
+  getStudentsForReports: async (search?: string): Promise<ReportStudent[]> => {
+    const params = search ? `?search=${encodeURIComponent(search)}` : ''
+    const res = await api.get<{ data: ReportStudent[] }>(`/api/reports/students${params}`)
+    return res.data.data
+  },
 }
