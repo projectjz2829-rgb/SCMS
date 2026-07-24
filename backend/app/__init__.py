@@ -111,7 +111,10 @@ def create_app(config_name: str = "default") -> Flask:
                 
             dist_dir = os.path.join(app.root_path, "static", "dist")
             if path != "" and os.path.exists(os.path.join(dist_dir, path)):
-                return send_from_directory(dist_dir, path)
+                resp = make_response(send_from_directory(dist_dir, path))
+                if path.startswith("assets/"):
+                    resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                return resp
                 
             response = make_response(send_from_directory(dist_dir, "index.html"))
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"

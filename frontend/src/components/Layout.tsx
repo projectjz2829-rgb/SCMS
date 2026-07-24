@@ -93,13 +93,12 @@ export default function Layout() {
 
   const nav = role === 'admin' ? adminNav : role === 'faculty' ? facultyNav : studentNav
   
-  // Use mock for now until we integrate real profile data API
   const userProfile = {
     label: user.profile?.full_name || user.email,
     sub: user.profile?.roll_no || user.profile?.emp_id || role,
     avatar: (user.profile?.full_name || user.email || 'A').substring(0, 2).toUpperCase()
   }
-  const unread = notificationsList.length // Mocking unread status as just total length since notifications lack read state
+  const unread = notificationsList.length
 
   const handleLogout = async () => {
     await logout()

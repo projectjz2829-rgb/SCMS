@@ -1,4 +1,8 @@
 export const DEPARTMENTS = [
+  'PG',
+  'M.Com',
+  'M.A English',
+  'UG',
   'B.Com',
   'B.Com CA',
   'BBA',
@@ -10,6 +14,4 @@ export const DEPARTMENTS = [
   'B.A English',
   'B.A Tamil',
   'B.A History',
-  'M.Com',
-  'M.A English'
 ];

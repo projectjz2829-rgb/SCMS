@@ -132,13 +132,15 @@ export default function FacultyList() {
     try {
       if (editModal.isNew) {
         // Only send fields the backend schema accepts
+        const rawEmail = (form.email || '').trim()
+        const validEmail = rawEmail.includes('@') ? rawEmail : `${(form.emp_id || 'FAC').toLowerCase()}@scms.edu`
         const payload: Record<string, string> = {
-          emp_id: form.emp_id || '',
-          full_name: form.full_name || '',
+          emp_id: (form.emp_id || '').trim(),
+          full_name: (form.full_name || '').trim(),
           dept: form.dept || '',
-          designation: form.designation || '',
-          email: form.email || '',
-          password: (form.emp_id || 'FAC') + '@Scms1',
+          designation: form.designation || 'Lecturer',
+          email: validEmail,
+          password: ((form.emp_id || 'FAC').trim()) + '@Scms1',
         }
         if (form.phone && form.phone.trim()) payload.phone = form.phone.trim()
         await facultyApi.create(payload)

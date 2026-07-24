@@ -186,14 +186,16 @@ export default function Students() {
     try {
       if (editModal.isNew) {
         // Only send fields the backend schema accepts
+        const rawEmail = (form.email || '').trim()
+        const validEmail = rawEmail.includes('@') ? rawEmail : `${(form.roll_no || 'STU').toLowerCase()}@scms.edu`
         const payload: Record<string, any> = {
-          roll_no: form.roll_no || '',
-          full_name: form.full_name || '',
+          roll_no: (form.roll_no || '').trim(),
+          full_name: (form.full_name || '').trim(),
           dept: form.dept || '',
           year: Number(form.year) || 1,
-          section: form.section || '',
-          email: form.email || '',
-          password: (form.roll_no || 'STU') + '@Scms1',
+          section: form.section || 'A',
+          email: validEmail,
+          password: ((form.roll_no || 'STU').trim()) + '@Scms1',
         }
         if (form.phone && form.phone.trim()) payload.phone = form.phone.trim()
         await studentsApi.create(payload)

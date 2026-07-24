@@ -43,7 +43,10 @@ def manage_courses():
     """GET /api/courses/ (list) or POST /api/courses/ (create)"""
     if request.method == "GET":
         from sqlalchemy import func
-        query = (
+        # Base query for counting matching Course records without group_by or aggregate outerjoins
+        count_query = db.session.query(func.count(Course.id))
+
+        data_query = (
             db.session.query(
                 Course,
                 Faculty.full_name,
@@ -51,29 +54,35 @@ def manage_courses():
             )
             .outerjoin(Faculty, Course.faculty_id == Faculty.id)
             .outerjoin(Enrollment, Course.id == Enrollment.course_id)
-            .group_by(Course.id, Faculty.id)
+            .group_by(Course.id, Faculty.id, Faculty.full_name)
         )
 
         # Faculty may only see courses assigned to them
         if current_user.role == RoleEnum.faculty:
             fp = current_user.faculty_profile
             faculty_id_filter = fp.id if fp else -1
-            query = query.filter(Course.faculty_id == faculty_id_filter)
+            count_query = count_query.filter(Course.faculty_id == faculty_id_filter)
+            data_query = data_query.filter(Course.faculty_id == faculty_id_filter)
         
         search = request.args.get("search", "").strip()
         if search:
-            query = query.filter(db.or_(
+            search_filter = db.or_(
                 Course.name.ilike(f"%{search}%"),
                 Course.code.ilike(f"%{search}%")
-            ))
+            )
+            count_query = count_query.filter(search_filter)
+            data_query = data_query.filter(search_filter)
             
         dept = request.args.get("dept", "").strip()
         if dept:
-            query = query.filter(Course.dept == dept)
+            count_query = count_query.filter(Course.dept == dept)
+            data_query = data_query.filter(Course.dept == dept)
             
         semester = request.args.get("semester", "").strip()
         if semester and semester.isdigit():
-            query = query.filter(Course.semester == int(semester))
+            sem_val = int(semester)
+            count_query = count_query.filter(Course.semester == sem_val)
+            data_query = data_query.filter(Course.semester == sem_val)
             
         sort_by = request.args.get("sort", "code").strip()
         valid_sorts = {
@@ -83,9 +92,9 @@ def manage_courses():
             "semester": Course.semester
         }
         if sort_by in valid_sorts:
-            query = query.order_by(valid_sorts[sort_by])
+            data_query = data_query.order_by(valid_sorts[sort_by])
         else:
-            query = query.order_by(Course.code)
+            data_query = data_query.order_by(Course.code)
             
         page_str = request.args.get("page")
         limit_str = request.args.get("limit")
@@ -100,11 +109,9 @@ def manage_courses():
             except ValueError:
                 return error_response("Invalid page or limit parameter.", status_code=400)
             
-            # Since query has group_by, simple .count() might fail or count groups.
-            # Using subquery for total count:
-            total = query.with_entities(func.count(Course.id)).count()
-            pages = (total + limit - 1) // limit
-            results = query.offset((page - 1) * limit).limit(limit).all()
+            total = count_query.scalar() or 0
+            pages = (total + limit - 1) // limit if limit > 0 else 1
+            results = data_query.offset((page - 1) * limit).limit(limit).all()
             
             meta = {
                 "page": page,
@@ -118,7 +125,7 @@ def manage_courses():
             ]
             return success_response(out, meta=meta)
         else:
-            results = query.all()
+            results = data_query.all()
             out = [
                 course.to_dict(faculty_name=fname, enrolled_count=ecount)
                 for course, fname, ecount in results

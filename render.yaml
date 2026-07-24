@@ -3,7 +3,7 @@ services:
     name: scms-backend
     env: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: cd ../frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt
     startCommand: bash start.sh
     healthCheckPath: /health
     envVars:
